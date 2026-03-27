@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { AgentState, getRoleConfig } from '../types'
 import { LegoCharacter } from './LegoCharacter'
+import { SpeechBubble } from './SpeechBubble'
 
 const MOVEMENT_THRESHOLD = 0.06
 
@@ -69,6 +70,12 @@ export function AgentBlock({ agent }: AgentBlockProps) {
         hairStyle="SHORT"
         hairColor="#1a1a1a"
       />
+      {(agent.currentTool || agent.lastMessage) && (
+        <SpeechBubble
+          text={agent.currentTool ? `${agent.currentTool}...` : agent.lastMessage ?? ''}
+          type={agent.status === 'meeting' ? 'meeting' : 'solo'}
+        />
+      )}
     </group>
   )
 }
