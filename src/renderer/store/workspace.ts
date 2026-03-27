@@ -100,6 +100,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (!existing && event.type !== 'agent_done') {
       // Late arrival — create agent implicitly
       get().handleEvent({ ...event, type: 'agent_start' })
+      return
     }
 
     if (event.type === 'tool_use') {
