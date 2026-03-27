@@ -49,7 +49,7 @@ export function Scene() {
 
         <Suspense fallback={null}>
           <Floor />
-          {Object.values(agents).map(agent => (
+          {Object.values(agents ?? {}).map(agent => (
             <AgentBlock key={agent.id} agent={agent} />
           ))}
         </Suspense>

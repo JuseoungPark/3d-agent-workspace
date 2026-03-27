@@ -1,8 +1,10 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { AgentState, getRoleConfig } from '../types'
 import { LegoCharacter } from './LegoCharacter'
+
+const MOVEMENT_THRESHOLD = 0.06
 
 interface AgentBlockProps {
   agent: AgentState
@@ -35,7 +37,7 @@ export function AgentBlock({ agent }: AgentBlockProps) {
     const dx = targetRef.current.x - posRef.current.x
     const dz = targetRef.current.z - posRef.current.z
     const dist = Math.sqrt(dx * dx + dz * dz)
-    if (dist > 0.04) {
+    if (dist > MOVEMENT_THRESHOLD) {
       const speed = 2.2 * dt
       const step = Math.min(dist, speed)
       posRef.current.x += (dx / dist) * step
@@ -53,11 +55,11 @@ export function AgentBlock({ agent }: AgentBlockProps) {
     }
   })
 
-  const walking = (() => {
+  const walking = useMemo(() => {
     const dx = agent.target.x - agent.pos.x
     const dz = agent.target.z - agent.pos.z
-    return Math.sqrt(dx * dx + dz * dz) > 0.06
-  })()
+    return Math.sqrt(dx * dx + dz * dz) > MOVEMENT_THRESHOLD
+  }, [agent.target.x, agent.target.z, agent.pos.x, agent.pos.z])
 
   return (
     <group ref={groupRef} position={[agent.pos.x, 0, agent.pos.z]}>
