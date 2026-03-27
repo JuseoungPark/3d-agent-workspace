@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { useWorkspaceStore } from './store/workspace'
 import { WSEvent } from './types'
 import { Scene } from './scene/Scene'
-const StreamBar = () => <div style={{height:34,background:'#080d14',borderTop:'1px solid #0f172a',color:'#334155',fontSize:11,display:'flex',alignItems:'center',padding:'0 12px'}}>Stream bar (Task 10)</div>
+import { StreamBar } from './ui/StreamBar'
 
 export default function App() {
   const handleEvent = useWorkspaceStore(s => s.handleEvent)
