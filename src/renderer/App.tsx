@@ -1,9 +1,7 @@
 import React, { useEffect } from 'react'
 import { useWorkspaceStore } from './store/workspace'
 import { WSEvent } from './types'
-
-// Placeholders — replaced in later tasks
-const Scene = () => <div style={{flex:1,background:'#020617',color:'#334155',display:'flex',alignItems:'center',justifyContent:'center'}}>3D Scene (Task 7)</div>
+import { Scene } from './scene/Scene'
 const StreamBar = () => <div style={{height:34,background:'#080d14',borderTop:'1px solid #0f172a',color:'#334155',fontSize:11,display:'flex',alignItems:'center',padding:'0 12px'}}>Stream bar (Task 10)</div>
 
 export default function App() {
