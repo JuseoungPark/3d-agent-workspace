@@ -1,11 +1,18 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { startServer } from './server'
+import { setupIPC } from './ipc'
 
-function createWindow() {
-  const win = new BrowserWindow({
+let mainWindow: BrowserWindow | null = null
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    minWidth: 800,
+    minHeight: 600,
     backgroundColor: '#020617',
+    titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -14,11 +21,19 @@ function createWindow() {
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  setupIPC(mainWindow)
 }
 
-app.whenReady().then(createWindow)
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
+app.whenReady().then(async () => {
+  await startServer()
+  createMainWindow()
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
