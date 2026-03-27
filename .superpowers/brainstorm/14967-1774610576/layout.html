@@ -1,0 +1,97 @@
+<h2>앱 전체 레이아웃은?</h2>
+<p class="subtitle">3D 뷰와 정보 패널의 비율 및 배치</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="fullscreen-3d" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a; height:160px; display:flex; align-items:center; justify-content:center; padding:12px;">
+      <div style="width:100%; height:100%; border:1px solid #334155; border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+        <!-- Title bar -->
+        <div style="background:#1e293b; height:18px; display:flex; align-items:center; padding:0 8px; gap:4px; flex-shrink:0;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;"></div>
+          <span style="color:#475569;font-size:8px;margin-left:6px;font-family:monospace;">agent-workspace</span>
+        </div>
+        <!-- Full 3D -->
+        <div style="flex:1; background:linear-gradient(180deg,#020617 0%,#0f172a 100%); display:flex; align-items:center; justify-content:center; position:relative;">
+          <div style="color:#334155;font-size:9px;font-family:monospace;letter-spacing:2px;">[ 전체가 3D 공간 ]</div>
+          <!-- Floating HUD elements -->
+          <div style="position:absolute;top:8px;right:8px;background:#ffffff08;border:1px solid #ffffff15;border-radius:4px;padding:3px 6px;font-size:7px;color:#64748b;font-family:monospace;">3 agents active</div>
+          <div style="position:absolute;bottom:8px;left:8px;background:#ffffff08;border:1px solid #ffffff15;border-radius:4px;padding:3px 6px;font-size:7px;color:#64748b;font-family:monospace;">ESC · zoom · click</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>풀스크린 3D</h3>
+      <p>3D가 전부. 정보는 말풍선 + 오버레이 HUD로만. 몰입감 최대. 클릭하면 에이전트 상세 팝업.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="split-panel" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a; height:160px; display:flex; align-items:center; justify-content:center; padding:12px;">
+      <div style="width:100%; height:100%; border:1px solid #334155; border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="background:#1e293b; height:18px; display:flex; align-items:center; padding:0 8px; gap:4px; flex-shrink:0;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;"></div>
+        </div>
+        <div style="flex:1; display:flex;">
+          <!-- 3D main -->
+          <div style="flex:1; background:linear-gradient(180deg,#020617 0%,#0f172a 100%); display:flex; align-items:center; justify-content:center;">
+            <div style="color:#334155;font-size:8px;font-family:monospace;letter-spacing:1px;">[ 3D 뷰 ]</div>
+          </div>
+          <!-- Right panel -->
+          <div style="width:90px; background:#0a0f1a; border-left:1px solid #1e293b; padding:6px; display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:7px;color:#475569;font-family:monospace;letter-spacing:1px;">AGENTS</div>
+            <div style="background:#1e293b;border-radius:3px;padding:3px 4px;">
+              <div style="font-size:7px;color:#a78bfa;font-family:monospace;">🔬 analyst</div>
+              <div style="background:#334155;border-radius:1px;height:2px;margin-top:2px;"><div style="background:#7c3aed;width:70%;height:100%;"></div></div>
+            </div>
+            <div style="background:#1e293b;border-radius:3px;padding:3px 4px;">
+              <div style="font-size:7px;color:#6ee7b7;font-family:monospace;">✍️ writer</div>
+              <div style="background:#334155;border-radius:1px;height:2px;margin-top:2px;"><div style="background:#059669;width:30%;height:100%;"></div></div>
+            </div>
+            <div style="margin-top:2px;font-size:7px;color:#475569;font-family:monospace;letter-spacing:1px;">LOGS</div>
+            <div style="flex:1;background:#080d14;border-radius:3px;padding:3px;overflow:hidden;">
+              <div style="font-size:6px;color:#334155;font-family:monospace;line-height:1.6;">read_file...<br/>analyzing...<br/>done ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3D + 사이드 패널</h3>
+      <p>왼쪽 3D, 오른쪽에 에이전트 목록·진행률·로그. 정보와 비주얼 동시에. 가장 실용적.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="3d-bottom" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a; height:160px; display:flex; align-items:center; justify-content:center; padding:12px;">
+      <div style="width:100%; height:100%; border:1px solid #334155; border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="background:#1e293b; height:18px; display:flex; align-items:center; padding:0 8px; gap:4px; flex-shrink:0;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></div>
+          <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;"></div>
+        </div>
+        <!-- 3D top (large) -->
+        <div style="flex:1; background:linear-gradient(180deg,#020617 0%,#0f172a 100%); display:flex; align-items:center; justify-content:center; border-bottom:1px solid #1e293b;">
+          <div style="color:#334155;font-size:8px;font-family:monospace;letter-spacing:1px;">[ 3D 뷰 — 와이드 ]</div>
+        </div>
+        <!-- Bottom log strip -->
+        <div style="height:32px; background:#080d14; padding:4px 8px; display:flex; gap:8px; align-items:center; overflow:hidden;">
+          <span style="font-size:6.5px;color:#a78bfa;font-family:monospace;">🔬 read_file app/page.tsx</span>
+          <span style="color:#1e293b;">|</span>
+          <span style="font-size:6.5px;color:#6ee7b7;font-family:monospace;">✍️ "초안 작성 중..."</span>
+          <span style="color:#1e293b;">|</span>
+          <span style="font-size:6.5px;color:#f59e0b;font-family:monospace;">⚙️ bash npm test</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>3D 와이드 + 하단 스트림</h3>
+      <p>3D는 최대한 크게, 하단에 모든 에이전트 활동이 터미널처럼 흐름. 가장 영화 같은 느낌.</p>
+    </div>
+  </div>
+
+</div>

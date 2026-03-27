@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Lego Avatar Customizer</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#020617; overflow:hidden; font-family:'SF Mono',monospace; display:flex; height:100vh; }
+#left { flex:1; position:relative; }
+#c { display:block; width:100%; height:100%; }
+
+/* ── Side panel ── */
+#panel {
+  width:260px; background:#080d14; border-left:1px solid #0f172a;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#panel-header {
+  padding:14px 16px 10px; border-bottom:1px solid #0f172a;
+  font-size:9px; letter-spacing:2px; color:#334155;
+}
+#panel-header .agent-name { font-size:12px; color:#e2e8f0; letter-spacing:0; margin-top:4px; }
+
+#panel-body { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:14px; }
+#panel-body::-webkit-scrollbar { width:4px; }
+#panel-body::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
+
+.section-title { font-size:8px; color:#334155; letter-spacing:2px; margin-bottom:6px; }
+
+/* Face presets */
+.face-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.face-opt {
+  aspect-ratio:1; border-radius:6px; border:1px solid #1e293b;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:22px; transition:border-color 0.15s, transform 0.1s;
+  background:#0a0f1a;
+}
+.face-opt:hover { border-color:#334155; transform:scale(1.08); }
+.face-opt.selected { border-color:#7c3aed; box-shadow:0 0 8px #7c3aed44; }
+
+/* Hair styles */
+.hair-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.hair-opt {
+  aspect-ratio:1; border-radius:6px; border:1px solid #1e293b;
+  cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  transition:border-color 0.15s, transform 0.1s; background:#0a0f1a; padding:4px;
+}
+.hair-opt:hover { border-color:#334155; transform:scale(1.08); }
+.hair-opt.selected { border-color:#059669; box-shadow:0 0 8px #05966944; }
+.hair-preview { font-size:16px; }
+.hair-label { font-size:7px; color:#475569; }
+
+/* Color picker */
+.color-row { display:flex; gap:6px; flex-wrap:wrap; }
+.color-swatch {
+  width:28px; height:28px; border-radius:6px; cursor:pointer;
+  border:2px solid transparent; transition:transform 0.1s, border-color 0.15s;
+}
+.color-swatch:hover { transform:scale(1.15); }
+.color-swatch.selected { border-color:white; }
+
+/* Photo import sim */
+#photo-area {
+  border:1px dashed #1e293b; border-radius:8px; padding:12px;
+  text-align:center; cursor:pointer; transition:border-color 0.2s;
+}
+#photo-area:hover { border-color:#334155; }
+#photo-area .icon { font-size:20px; margin-bottom:4px; }
+#photo-area .text { font-size:8px; color:#334155; line-height:1.6; }
+#photo-area .sub { font-size:7px; color:#1e293b; margin-top:4px; }
+
+/* Sample photos */
+.sample-photos { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:6px; }
+.sample-photo {
+  aspect-ratio:1; border-radius:6px; border:1px solid #1e293b;
+  cursor:pointer; overflow:hidden; display:flex; align-items:center; justify-content:center;
+  font-size:26px; background:#0a0f1a; transition:border-color 0.15s, transform 0.1s;
+}
+.sample-photo:hover { border-color:#334155; transform:scale(1.05); }
+.sample-photo.selected { border-color:#d97706; box-shadow:0 0 8px #d9770644; }
+
+/* Agent selector */
+.agent-tabs { display:flex; gap:4px; }
+.agent-tab {
+  flex:1; padding:5px 4px; border-radius:6px; border:1px solid #1e293b;
+  cursor:pointer; text-align:center; font-size:10px;
+  transition:background 0.15s, border-color 0.15s;
+}
+.agent-tab:hover { background:#0f172a; }
+.agent-tab.selected { border-color:#7c3aed; background:#1a0d2e; }
+
+#kbd { position:absolute; bottom:10px; left:14px; font-size:9px; color:#1e3a5f; }
+kbd { background:#0a0f1a; border:1px solid #1e293b; border-radius:3px; padding:1px 5px; color:#334155; font-family:inherit; }
+</style>
+</head>
+<body>
+
+<div id="left">
+  <canvas id="c"></canvas>
+  <div id="kbd"><kbd>M</kbd> meeting &nbsp;<kbd>R</kbd> reset</div>
+</div>
+
+<div id="panel">
+  <div id="panel-header">
+    AVATAR EDITOR
+    <div class="agent-name" id="panel-agent-name">🔬 analyst</div>
+  </div>
+  <div id="panel-body">
+
+    <!-- Agent selector -->
+    <div>
+      <div class="section-title">AGENT</div>
+      <div class="agent-tabs">
+        <div class="agent-tab selected" data-idx="0" onclick="selectAgent(0)">🔬<br><span style="font-size:7px;color:#475569">analyst</span></div>
+        <div class="agent-tab" data-idx="1" onclick="selectAgent(1)">✍️<br><span style="font-size:7px;color:#475569">writer</span></div>
+        <div class="agent-tab" data-idx="2" onclick="selectAgent(2)">🔍<br><span style="font-size:7px;color:#475569">reviewer</span></div>
+      </div>
+    </div>
+
+    <!-- Photo import -->
+    <div>
+      <div class="section-title">FACE — 사진에서 가져오기</div>
+      <div id="photo-area">
+        <div class="icon">📸</div>
+        <div class="text">이미지 드롭 또는 클릭<br>→ 자동으로 얼굴/헤어/옷 감지</div>
+        <div class="sub">jpg · png · gif 지원</div>
+      </div>
+      <div style="font-size:8px;color:#334155;margin:8px 0 5px">또는 샘플 선택</div>
+      <div class="sample-photos">
+        <div class="sample-photo" onclick="applyFace(0,'😊')">😊</div>
+        <div class="sample-photo" onclick="applyFace(0,'😎')">😎</div>
+        <div class="sample-photo" onclick="applyFace(0,'🤓')">🤓</div>
+        <div class="sample-photo" onclick="applyFace(0,'😄')">😄</div>
+        <div class="sample-photo" onclick="applyFace(0,'🧐')">🧐</div>
+        <div class="sample-photo" onclick="applyFace(0,'😤')">😤</div>
+      </div>
+    </div>
+
+    <!-- Face preset -->
+    <div>
+      <div class="section-title">FACE — 프리셋</div>
+      <div class="face-grid" id="face-grid">
+        <div class="face-opt selected" data-face="😐" onclick="applyFace(this,'😐')">😐</div>
+        <div class="face-opt" data-face="🙂" onclick="applyFace(this,'🙂')">🙂</div>
+        <div class="face-opt" data-face="😤" onclick="applyFace(this,'😤')">😤</div>
+        <div class="face-opt" data-face="🤔" onclick="applyFace(this,'🤔')">🤔</div>
+        <div class="face-opt" data-face="😴" onclick="applyFace(this,'😴')">😴</div>
+        <div class="face-opt" data-face="🥸" onclick="applyFace(this,'🥸')">🥸</div>
+        <div class="face-opt" data-face="😈" onclick="applyFace(this,'😈')">😈</div>
+        <div class="face-opt" data-face="🤖" onclick="applyFace(this,'🤖')">🤖</div>
+      </div>
+    </div>
+
+    <!-- Hair style -->
+    <div>
+      <div class="section-title">HAIR STYLE</div>
+      <div class="hair-grid" id="hair-grid">
+        <div class="hair-opt selected" data-style="SHORT" onclick="applyHair(this,'SHORT')">
+          <div class="hair-preview">▬</div><div class="hair-label">SHORT</div>
+        </div>
+        <div class="hair-opt" data-style="LONG" onclick="applyHair(this,'LONG')">
+          <div class="hair-preview">⬇</div><div class="hair-label">LONG</div>
+        </div>
+        <div class="hair-opt" data-style="SPIKY" onclick="applyHair(this,'SPIKY')">
+          <div class="hair-preview">⚡</div><div class="hair-label">SPIKY</div>
+        </div>
+        <div class="hair-opt" data-style="BUN" onclick="applyHair(this,'BUN')">
+          <div class="hair-preview">⭕</div><div class="hair-label">BUN</div>
+        </div>
+        <div class="hair-opt" data-style="CURLY" onclick="applyHair(this,'CURLY')">
+          <div class="hair-preview">🌀</div><div class="hair-label">CURLY</div>
+        </div>
+        <div class="hair-opt" data-style="HELMET" onclick="applyHair(this,'HELMET')">
+          <div class="hair-preview">⛑</div><div class="hair-label">HELMET</div>
+        </div>
+        <div class="hair-opt" data-style="PONYTAIL" onclick="applyHair(this,'PONYTAIL')">
+          <div class="hair-preview">🎀</div><div class="hair-label">PONYTAIL</div>
+        </div>
+        <div class="hair-opt" data-style="BALD" onclick="applyHair(this,'BALD')">
+          <div class="hair-preview">○</div><div class="hair-label">BALD</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hair color -->
+    <div>
+      <div class="section-title">HAIR COLOR</div>
+      <div class="color-row" id="hair-colors">
+        <div class="color-swatch selected" style="background:#1a1a1a" data-color="#1a1a1a" onclick="applyHairColor(this,'#1a1a1a')"></div>
+        <div class="color-swatch" style="background:#8B4513" data-color="#8B4513" onclick="applyHairColor(this,'#8B4513')"></div>
+        <div class="color-swatch" style="background:#D2691E" data-color="#D2691E" onclick="applyHairColor(this,'#D2691E')"></div>
+        <div class="color-swatch" style="background:#FFD700" data-color="#FFD700" onclick="applyHairColor(this,'#FFD700')"></div>
+        <div class="color-swatch" style="background:#C0C0C0" data-color="#C0C0C0" onclick="applyHairColor(this,'#C0C0C0')"></div>
+        <div class="color-swatch" style="background:#FF6B6B" data-color="#FF6B6B" onclick="applyHairColor(this,'#FF6B6B')"></div>
+        <div class="color-swatch" style="background:#6B9FFF" data-color="#6B9FFF" onclick="applyHairColor(this,'#6B9FFF')"></div>
+        <div class="color-swatch" style="background:#7c3aed" data-color="#7c3aed" onclick="applyHairColor(this,'#7c3aed')"></div>
+      </div>
+    </div>
+
+    <!-- Torso color -->
+    <div>
+      <div class="section-title">OUTFIT COLOR</div>
+      <div class="color-row" id="body-colors">
+        <div class="color-swatch selected" style="background:#7c3aed" data-color="#7c3aed" onclick="applyBodyColor(this,'#7c3aed')"></div>
+        <div class="color-swatch" style="background:#059669" data-color="#059669" onclick="applyBodyColor(this,'#059669')"></div>
+        <div class="color-swatch" style="background:#d97706" data-color="#d97706" onclick="applyBodyColor(this,'#d97706')"></div>
+        <div class="color-swatch" style="background:#2563eb" data-color="#2563eb" onclick="applyBodyColor(this,'#2563eb')"></div>
+        <div class="color-swatch" style="background:#dc2626" data-color="#dc2626" onclick="applyBodyColor(this,'#dc2626')"></div>
+        <div class="color-swatch" style="background:#0891b2" data-color="#0891b2" onclick="applyBodyColor(this,'#0891b2')"></div>
+        <div class="color-swatch" style="background:#be185d" data-color="#be185d" onclick="applyBodyColor(this,'#be185d')"></div>
+        <div class="color-swatch" style="background:#334155" data-color="#334155" onclick="applyBodyColor(this,'#334155')"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+function resize() {
+  const w = document.getElementById('left').clientWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020617);
+scene.fog = new THREE.FogExp2(0x020617, 0.03);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+camera.position.set(10, 13, 10);
+camera.lookAt(0, 0, 0);
+
+const ambient = new THREE.AmbientLight(0x1a2a4a, 2.5);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xffffff, 3);
+sun.position.set(8, 16, 8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.1; sun.shadow.camera.far = 60;
+sun.shadow.camera.left = sun.shadow.camera.bottom = -16;
+sun.shadow.camera.right = sun.shadow.camera.top = 16;
+sun.shadow.bias = -0.001;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x2244aa, 1.2);
+fill.position.set(-5, 4, -5);
+scene.add(fill);
+
+resize();
+window.addEventListener('resize', resize);
+
+// Floor
+const tileMat = new THREE.MeshLambertMaterial({ color: 0x0b1728 });
+const tileGeo = new THREE.BoxGeometry(0.98, 0.12, 0.98);
+for (let x = -6; x <= 6; x++) for (let z = -6; z <= 6; z++) {
+  const t = new THREE.Mesh(tileGeo, tileMat.clone());
+  t.position.set(x, -0.06, z);
+  t.receiveShadow = true;
+  t.material.color.setHex((x+z)%2===0 ? 0x0b1728 : 0x0d1e33);
+  scene.add(t);
+}
+const grid = new THREE.GridHelper(13, 13, 0x1e3a5f, 0x1e3a5f);
+grid.position.y = 0.01; grid.material.opacity = 0.35; grid.material.transparent = true;
+scene.add(grid);
+
+// ── Face texture ──
+function makeFaceTex(emoji) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(0, 0, 128, 128);
+  ctx.font = '72px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, 64, 68);
+  return new THREE.CanvasTexture(c);
+}
+
+// ── Hair geometry builder ──
+function makeHairGeo(style) {
+  switch(style) {
+    case 'SHORT':
+      return new THREE.BoxGeometry(0.52, 0.14, 0.5);
+    case 'LONG': {
+      const g = new THREE.Group();
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.14, 0.5), null);
+      top.position.y = 0;
+      // Long hanging parts
+      const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.46), null);
+      sideL.position.set(-0.2, -0.3, 0);
+      const sideR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.6, 0.46), null);
+      sideR.position.set(0.2, -0.3, 0);
+      return { multi: true, parts: ['top_0.52_0.14_0.5_0_0_0', 'side_0.12_0.6_0.46_-0.2_-0.3_0', 'side_0.12_0.6_0.46_0.2_-0.3_0'] };
+    }
+    case 'SPIKY': {
+      return { multi: true, parts: [
+        'box_0.5_0.1_0.48_0_0_0',
+        'spike_0.08_0.28_0.08_-0.16_0.18_0',
+        'spike_0.08_0.32_0.08_0_0.2_0',
+        'spike_0.08_0.28_0.08_0.16_0.18_0',
+      ]};
+    }
+    case 'BUN':
+      return { multi: true, parts: [
+        'box_0.52_0.1_0.5_0_0_0',
+        'sphere_0.18_0.18_0.18_0_0.2_0',
+      ]};
+    case 'CURLY':
+      return { multi: true, parts: [
+        'box_0.6_0.22_0.58_0_0_0',
+        'sphere_0.14_0.14_0.14_-0.22_0.1_0.1',
+        'sphere_0.14_0.14_0.14_0.22_0.1_0.1',
+        'sphere_0.14_0.14_0.14_0_0.15_-0.18',
+      ]};
+    case 'HELMET':
+      return new THREE.BoxGeometry(0.58, 0.52, 0.56);
+    case 'PONYTAIL':
+      return { multi: true, parts: [
+        'box_0.52_0.12_0.5_0_0_0',
+        'box_0.1_0.5_0.1_0_0.02_-0.28',
+      ]};
+    case 'BALD':
+    default:
+      return null;
+  }
+}
+
+function buildHairMesh(style, color) {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(color) });
+
+  const geo = makeHairGeo(style);
+  if (!geo) return group;
+
+  if (geo instanceof THREE.BufferGeometry) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.y = 0.24;
+    m.castShadow = true;
+    group.add(m);
+    return group;
+  }
+
+  if (geo.multi) {
+    geo.parts.forEach(p => {
+      const bits = p.split('_');
+      const type = bits[0];
+      const w = parseFloat(bits[1]), h = parseFloat(bits[2]), d = parseFloat(bits[3]);
+      const px = parseFloat(bits[4]||0), py = parseFloat(bits[5]||0), pz = parseFloat(bits[6]||0);
+      let g;
+      if (type === 'sphere') g = new THREE.SphereGeometry(w, 8, 6);
+      else if (type === 'spike') g = new THREE.ConeGeometry(w/2, h, 5);
+      else g = new THREE.BoxGeometry(w, h, d);
+      const m = new THREE.Mesh(g, mat.clone());
+      m.position.set(px, 0.24 + py, pz);
+      m.castShadow = true;
+      group.add(m);
+    });
+  }
+  return group;
+}
+
+// ── Build full lego character ──
+function buildLego(bodyColorHex, faceEmoji = '😐', hairStyle = 'SHORT', hairColorHex = '#1a1a1a') {
+  const group = new THREE.Group();
+
+  const bodyMat  = new THREE.MeshLambertMaterial({ color: new THREE.Color(bodyColorHex) });
+  const headMat  = new THREE.MeshLambertMaterial({ color: 0xffd700 });
+  const legMat   = new THREE.MeshLambertMaterial({ color: 0x1a1a2e });
+  const armMat   = new THREE.MeshLambertMaterial({ color: new THREE.Color(bodyColorHex) });
+  const handMat  = new THREE.MeshLambertMaterial({ color: 0xffd700 });
+  const footMat  = new THREE.MeshLambertMaterial({ color: 0x0f0f1e });
+  const studMat  = new THREE.MeshLambertMaterial({ color: new THREE.Color(bodyColorHex).lerp(new THREE.Color(0xffffff), 0.2) });
+
+  // Torso
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 0.3), bodyMat);
+  torso.position.y = 0.75; torso.castShadow = true; group.add(torso);
+
+  // Torso studs
+  const studGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.06, 8);
+  [-0.15, 0.15].forEach(x => {
+    const s = new THREE.Mesh(studGeo, studMat);
+    s.position.set(x, 1.045, 0); group.add(s);
+  });
+
+  // Head — 6 materials, front face = face texture
+  const faceTex = makeFaceTex(faceEmoji);
+  const headMats = [
+    headMat.clone(), headMat.clone(), headMat.clone(),
+    headMat.clone(), new THREE.MeshLambertMaterial({ map: faceTex }),
+    headMat.clone()
+  ];
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.44, 0.44), headMats);
+  head.position.y = 1.28; head.castShadow = true; group.add(head);
+
+  // Head stud
+  const hs = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.09, 8), studMat);
+  hs.position.y = 1.545; group.add(hs);
+
+  // Hair
+  const hairGroup = buildHairMesh(hairStyle, hairColorHex);
+  hairGroup.position.y = 1.49;
+  group.add(hairGroup);
+
+  // Legs
+  const legGeo = new THREE.BoxGeometry(0.24, 0.4, 0.28);
+  const legL = new THREE.Mesh(legGeo, legMat); legL.position.set(-0.16, 0.35, 0); legL.castShadow = true; group.add(legL);
+  const legR = new THREE.Mesh(legGeo, legMat.clone()); legR.position.set(0.16, 0.35, 0); legR.castShadow = true; group.add(legR);
+
+  // Feet
+  const footGeo = new THREE.BoxGeometry(0.26, 0.1, 0.32);
+  [-0.16, 0.16].forEach(x => {
+    const f = new THREE.Mesh(footGeo, footMat); f.position.set(x, 0.15, 0.02); group.add(f);
+  });
+
+  // Arms
+  const armGeo = new THREE.BoxGeometry(0.14, 0.38, 0.22);
+  const armL = new THREE.Mesh(armGeo, armMat); armL.position.set(-0.39, 0.78, 0); armL.castShadow = true; group.add(armL);
+  const armR = new THREE.Mesh(armGeo, armMat.clone()); armR.position.set(0.39, 0.78, 0); armR.castShadow = true; group.add(armR);
+
+  // Hands
+  const handGeo = new THREE.SphereGeometry(0.09, 6, 6);
+  [-0.39, 0.39].forEach(x => {
+    const h = new THREE.Mesh(handGeo, handMat); h.position.set(x, 0.57, 0); group.add(h);
+  });
+
+  group.userData = { legL, legR, armL, armR, head, bodyMat, armMat, hairGroup };
+  return group;
+}
+
+// ── Agent state ──
+const AGENT_DEFS = [
+  { name:'🔬 analyst', color:'#7c3aed', face:'😐', hair:'SHORT', hairColor:'#1a1a1a', startPos:[-3,0,-2] },
+  { name:'✍️ writer',  color:'#059669', face:'🙂', hair:'LONG',  hairColor:'#8B4513', startPos:[2,0,-3]  },
+  { name:'🔍 reviewer',color:'#d97706', face:'🧐', hair:'BALD',  hairColor:'#1a1a1a', startPos:[0,0,2]   },
+];
+
+const agents = AGENT_DEFS.map(def => {
+  const mesh = buildLego(def.color, def.face, def.hair, def.hairColor);
+  mesh.position.set(...def.startPos);
+  scene.add(mesh);
+  return {
+    mesh, name: def.name,
+    pos: new THREE.Vector3(...def.startPos),
+    target: new THREE.Vector3(...def.startPos),
+    walkPhase: Math.random() * Math.PI * 2,
+    color: def.color, face: def.face, hair: def.hair, hairColor: def.hairColor,
+    _patrolTimer: null,
+  };
+});
+
+const PATROLS = [
+  [[-3,-2],[-1,-3],[-4,-1],[-2,-4]],
+  [[2,-3],[4,-1],[3,1],[1,-2]],
+  [[0,2],[2,3],[-1,3],[1,4]],
+];
+let meetingMode = false;
+let selectedAgent = 0;
+
+function pickPatrol(idx) {
+  if (meetingMode) return;
+  const a = agents[idx];
+  const pts = PATROLS[idx];
+  const pt = pts[Math.floor(Math.random() * pts.length)];
+  a.target.set(pt[0], 0, pt[1]);
+}
+agents.forEach((_, i) => setTimeout(() => pickPatrol(i), i * 500 + 200));
+
+// ── UI callbacks (exposed globally) ──
+window.selectAgent = (idx) => {
+  selectedAgent = idx;
+  document.querySelectorAll('.agent-tab').forEach((el,i) => el.classList.toggle('selected', i===idx));
+  document.getElementById('panel-agent-name').textContent = agents[idx].name;
+};
+
+window.applyFace = (elOrIdx, emoji) => {
+  const a = agents[selectedAgent];
+  a.face = emoji;
+  rebuildAgent(selectedAgent);
+  if (elOrIdx instanceof HTMLElement) {
+    document.querySelectorAll('.face-opt').forEach(e => e.classList.remove('selected'));
+    elOrIdx.classList.add('selected');
+  }
+};
+
+window.applyHair = (el, style) => {
+  agents[selectedAgent].hair = style;
+  rebuildAgent(selectedAgent);
+  document.querySelectorAll('.hair-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+window.applyHairColor = (el, color) => {
+  agents[selectedAgent].hairColor = color;
+  rebuildAgent(selectedAgent);
+  document.querySelectorAll('#hair-colors .color-swatch').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+window.applyBodyColor = (el, color) => {
+  agents[selectedAgent].color = color;
+  rebuildAgent(selectedAgent);
+  document.querySelectorAll('#body-colors .color-swatch').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+function rebuildAgent(idx) {
+  const a = agents[idx];
+  scene.remove(a.mesh);
+  const newMesh = buildLego(a.color, a.face, a.hair, a.hairColor);
+  newMesh.position.copy(a.pos);
+  newMesh.rotation.y = a.mesh.rotation.y;
+  scene.add(newMesh);
+  a.mesh = newMesh;
+}
+
+// ── Meeting ──
+window.triggerMeeting = () => {
+  if (meetingMode) return;
+  meetingMode = true;
+  agents[0].target.set(-0.8, 0, 0.2);
+  agents[1].target.set(0.8, 0, 0.2);
+};
+
+// ── Animate ──
+const clock = new THREE.Clock();
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t  = clock.getElapsedTime();
+
+  agents.forEach((a, idx) => {
+    const dx = a.target.x - a.pos.x;
+    const dz = a.target.z - a.pos.z;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    const walking = dist > 0.06;
+    const speed = 2.2;
+
+    if (walking) {
+      const step = Math.min(dist, speed * dt);
+      a.pos.x += (dx/dist) * step;
+      a.pos.z += (dz/dist) * step;
+      a.mesh.rotation.y = Math.atan2(dx, dz);
+    } else if (!meetingMode && !a._patrolTimer) {
+      a._patrolTimer = setTimeout(() => { a._patrolTimer = null; pickPatrol(idx); }, 900 + Math.random()*1200);
+    }
+
+    a.mesh.position.set(a.pos.x, 0, a.pos.z);
+
+    const ud = a.mesh.userData;
+    if (walking) {
+      const ph = t * 8 + a.walkPhase;
+      ud.legL.rotation.x =  Math.sin(ph) * 0.45;
+      ud.legR.rotation.x = -Math.sin(ph) * 0.45;
+      ud.armL.rotation.x = -Math.sin(ph) * 0.35;
+      ud.armR.rotation.x =  Math.sin(ph) * 0.35;
+      a.mesh.position.y   =  Math.abs(Math.sin(ph * 0.5)) * 0.04;
+    } else {
+      ud.legL.rotation.x *= 0.85; ud.legR.rotation.x *= 0.85;
+      ud.armL.rotation.x *= 0.85; ud.armR.rotation.x *= 0.85;
+      a.mesh.position.y = Math.sin(t * 1.8 + a.walkPhase) * 0.025;
+      ud.head.rotation.y = Math.sin(t * 0.7 + a.walkPhase) * 0.15;
+    }
+
+    // Highlight selected agent
+    a.mesh.children.forEach(c => {
+      if (c.material && c.material.emissive) {
+        c.material.emissiveIntensity = idx === selectedAgent ? 0.08 : 0;
+      }
+    });
+  });
+
+  renderer.render(scene, camera);
+}
+frame();
+
+document.addEventListener('keydown', e => {
+  if (e.key==='m'||e.key==='M') window.triggerMeeting();
+  if (e.key==='r'||e.key==='R') location.reload();
+});
+</script>
+</body>
+</html>

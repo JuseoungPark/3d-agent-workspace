@@ -1,0 +1,58 @@
+<h2>어떤 비주얼 분위기를 원하세요?</h2>
+<p class="subtitle">3D 에이전트 워크스페이스의 전체적인 느낌을 골라주세요</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="cyberpunk" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #0d0d1a 0%, #1a0033 50%, #000d1a 100%); height: 160px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; font-family:monospace;">
+      <div style="display:flex; gap:12px; align-items:flex-end;">
+        <div style="width:32px; height:40px; background:#7c3aed; border-radius:4px 4px 0 0; box-shadow: 0 0 12px #7c3aed;"></div>
+        <div style="width:32px; height:56px; background:#06b6d4; border-radius:4px 4px 0 0; box-shadow: 0 0 12px #06b6d4;"></div>
+        <div style="width:32px; height:32px; background:#7c3aed; border-radius:4px 4px 0 0; box-shadow: 0 0 12px #7c3aed;"></div>
+      </div>
+      <div style="color:#06b6d4; font-size:10px; letter-spacing:3px; margin-top:8px;">AGENT_01 WORKING...</div>
+      <div style="color:#7c3aed88; font-size:9px;">▓▓▓▓▓▓░░░░ 67%</div>
+    </div>
+    <div class="card-body">
+      <h3>사이버펑크 / 다크</h3>
+      <p>네온, 홀로그램, 어두운 배경. 에이전트들이 빛나는 아바타로 도시 속을 돌아다니는 느낌. 미래적이고 강렬함.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="minimal" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #f8f9fa; height: 160px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px;">
+      <div style="display:flex; gap:16px;">
+        <div style="width:48px; height:48px; border-radius:50%; background:#e2e8f0; border:2px solid #cbd5e1; display:flex; align-items:center; justify-content:center; font-size:18px;">🤖</div>
+        <div style="width:48px; height:48px; border-radius:50%; background:#dbeafe; border:2px solid #93c5fd; display:flex; align-items:center; justify-content:center; font-size:18px;">⚡</div>
+      </div>
+      <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:6px 12px; font-size:11px; color:#64748b; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        analyzing codebase...
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>클린 / 미니멀</h3>
+      <p>화이트 배경, 부드러운 그림자, 명확한 정보. 결과물에 집중. 깔끔하고 전문적인 툴 느낌.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="studio" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: linear-gradient(135deg, #1c1917 0%, #292524 100%); height: 160px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div style="width:36px; height:36px; border-radius:8px; background:#d97706; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 2px 8px rgba(217,119,6,0.4);">🔬</div>
+        <div style="width:2px; height:24px; background:#d9770660;"></div>
+        <div style="width:36px; height:36px; border-radius:8px; background:#059669; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 2px 8px rgba(5,150,105,0.4);">✍️</div>
+        <div style="width:2px; height:24px; background:#05966960;"></div>
+        <div style="width:36px; height:36px; border-radius:8px; background:#7c3aed; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 2px 8px rgba(124,58,237,0.4);">🔍</div>
+      </div>
+      <div style="color:#a78bfa; font-size:10px; letter-spacing:2px; margin-top:4px;">ANALYST · WRITER · REVIEWER</div>
+      <div style="background:#ffffff15; border:1px solid #ffffff20; border-radius:6px; padding:4px 10px; font-size:10px; color:#e7e5e4; margin-top:4px;">
+        💬 &ldquo;파일 분석 완료, 넘길게&rdquo;
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>다크 스튜디오 / 따뜻함</h3>
+      <p>어둡지만 차갑지 않음. 에이전트마다 색상 구분, 따뜻한 앰버 톤. 전문적인 작업실 느낌.</p>
+    </div>
+  </div>
+
+</div>

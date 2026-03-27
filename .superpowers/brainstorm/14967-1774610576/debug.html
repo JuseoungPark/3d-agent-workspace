@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Debug</title>
+<style>
+body{margin:0;background:#020617;color:#0f0;font-family:monospace;font-size:12px;}
+#log{position:fixed;top:0;left:0;right:0;bottom:50%;overflow:auto;padding:8px;border-bottom:1px solid #0f0;}
+#cv{position:fixed;top:50%;left:0;right:0;bottom:0;}
+canvas{width:100%;height:100%;display:block;}
+</style>
+</head>
+<body>
+<div id="log"></div>
+<div id="cv"><canvas id="c"></canvas></div>
+<script type="module">
+const log = (msg, color='#0f0') => {
+  const d = document.getElementById('log');
+  const p = document.createElement('div');
+  p.style.color = color;
+  p.textContent = '[' + new Date().toISOString().slice(11,23) + '] ' + msg;
+  d.appendChild(p);
+  d.scrollTop = d.scrollHeight;
+};
+
+try {
+  log('Importing THREE...');
+  const { default: _, ...rest } = await import('./three.module.js').catch(e => { throw e; });
+} catch(e) { log('Import catch: ' + e, '#f00'); }
+
+import * as THREE from './three.module.js';
+log('THREE loaded: r' + THREE.REVISION);
+
+try {
+  const canvas = document.getElementById('c');
+  log('canvas: ' + canvas.clientWidth + 'x' + canvas.clientHeight);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(devicePixelRatio);
+  renderer.setSize(document.getElementById('cv').clientWidth, window.innerHeight/2);
+  log('renderer OK');
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x020617);
+
+  const camera = new THREE.PerspectiveCamera(40, document.getElementById('cv').clientWidth / (window.innerHeight/2), 0.1, 200);
+  camera.position.set(6, 8, 6);
+  camera.lookAt(0, 1, 0);
+  log('camera OK at ' + camera.position.x.toFixed(1) + ',' + camera.position.y.toFixed(1));
+
+  scene.add(new THREE.AmbientLight(0xffffff, 2));
+  const sun = new THREE.DirectionalLight(0xffffff, 3);
+  sun.position.set(5, 10, 5);
+  scene.add(sun);
+  log('lights OK');
+
+  // Build a simple LEGO block
+  const g = new THREE.Group();
+
+  // Torso
+  const torso = new THREE.Mesh(
+    new THREE.BoxGeometry(0.65, 0.52, 0.32),
+    new THREE.MeshLambertMaterial({ color: 0x7c3aed })
+  );
+  g.add(torso);
+  log('torso OK');
+
+  // Head (cylinder)
+  const head = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.24, 0.25, 0.46, 16),
+    new THREE.MeshLambertMaterial({ color: 0xffd700 })
+  );
+  head.position.y = 0.6;
+  g.add(head);
+  log('head OK');
+
+  // C-hand test
+  const hand = new THREE.Mesh(
+    new THREE.TorusGeometry(0.078, 0.034, 10, 18, Math.PI * 1.55),
+    new THREE.MeshLambertMaterial({ color: 0xffd700 })
+  );
+  hand.position.set(0.5, 0, 0);
+  g.add(hand);
+  log('hand (torus) OK');
+
+  g.position.y = 0.5;
+  scene.add(g);
+  log('group added to scene — objects: ' + scene.children.length);
+
+  let frame = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    g.rotation.y += 0.008;
+    renderer.render(scene, camera);
+    if (frame++ === 0) log('first render OK!', '#ff0');
+  }
+  animate();
+
+} catch(e) {
+  log('ERROR: ' + e.message, '#f00');
+  log(e.stack, '#f88');
+}
+</script>
+</body>
+</html>

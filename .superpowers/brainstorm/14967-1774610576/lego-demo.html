@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Lego Agent Demo</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#020617; overflow:hidden; font-family:'SF Mono',monospace; }
+#c { display:block; width:100vw; height:100vh; }
+#hud {
+  position:fixed; bottom:0; left:0; right:0; height:34px;
+  background:rgba(6,8,15,0.9); border-top:1px solid #0f172a;
+  display:flex; align-items:center; padding:0 52px;
+  font-size:10px; gap:20px; color:#475569;
+}
+#hud::before { content:'LIVE'; position:absolute; left:10px; font-size:7px; color:#ef4444; letter-spacing:2px; border:1px solid #ef444433; border-radius:2px; padding:1px 4px; }
+.se { white-space:nowrap; }
+#kbd { position:fixed; top:10px; left:14px; font-size:9px; color:#1e3a5f; }
+kbd { background:#0a0f1a; border:1px solid #1e293b; border-radius:3px; padding:1px 5px; color:#334155; font-family:inherit; }
+#info { position:fixed; top:10px; right:14px; font-size:9px; color:#334155; text-align:right; line-height:1.8; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div class="se" id="s0"><span style="color:#a78bfa">🔬 analyst</span> › <span style="color:#64748b">read_file app/page.tsx</span></div>
+  <div class="se" id="s1"><span style="color:#4ade80">✍️ writer</span> › <span style="color:#4ade80">"컴포넌트 구조 파악 완료"</span></div>
+  <div class="se" id="s2"><span style="color:#fbbf24">🔍 reviewer</span> › <span style="color:#64748b">npm run lint → 0 errors</span></div>
+</div>
+<div id="kbd"><kbd>M</kbd> meeting &nbsp;<kbd>R</kbd> reset &nbsp;<kbd>scroll</kbd> zoom</div>
+<div id="info">agent-workspace<br><span style="color:#1e3a5f">lego character demo</span></div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
+
+// ── Setup ──
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight - 34);
+  camera.aspect = innerWidth / (innerHeight - 34);
+  camera.updateProjectionMatrix();
+}
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020617);
+scene.fog = new THREE.FogExp2(0x020617, 0.035);
+
+// ── Camera (isometric-ish) ──
+const camera = new THREE.PerspectiveCamera(45, innerWidth / (innerHeight - 34), 0.1, 200);
+camera.position.set(12, 14, 12);
+camera.lookAt(0, 0, 0);
+resize();
+window.addEventListener('resize', resize);
+
+// ── Lights ──
+const ambient = new THREE.AmbientLight(0x1a2a4a, 2.5);
+scene.add(ambient);
+
+const sun = new THREE.DirectionalLight(0xffffff, 3);
+sun.position.set(8, 16, 8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.1;
+sun.shadow.camera.far = 60;
+sun.shadow.camera.left = sun.shadow.camera.bottom = -20;
+sun.shadow.camera.right = sun.shadow.camera.top = 20;
+sun.shadow.bias = -0.001;
+scene.add(sun);
+
+const fill = new THREE.DirectionalLight(0x2244aa, 1.2);
+fill.position.set(-5, 4, -5);
+scene.add(fill);
+
+// ── Floor grid ──
+const GRID = 7;
+const tileMat = new THREE.MeshLambertMaterial({ color: 0x0b1728 });
+const tileGeo = new THREE.BoxGeometry(0.98, 0.12, 0.98);
+
+for (let x = -GRID; x <= GRID; x++) {
+  for (let z = -GRID; z <= GRID; z++) {
+    const tile = new THREE.Mesh(tileGeo, tileMat.clone());
+    tile.position.set(x, -0.06, z);
+    tile.receiveShadow = true;
+    // Subtle stud on each tile
+    tile.material.color.setHex((x + z) % 2 === 0 ? 0x0b1728 : 0x0d1e33);
+    scene.add(tile);
+  }
+}
+
+// Grid lines
+const gridHelper = new THREE.GridHelper(GRID * 2 + 1, GRID * 2 + 1, 0x1e3a5f, 0x1e3a5f);
+gridHelper.position.y = 0.01;
+gridHelper.material.opacity = 0.4;
+gridHelper.material.transparent = true;
+scene.add(gridHelper);
+
+// ── LEGO character builder ──
+function makeLego(bodyColor, headColor = 0xffd700, name = '') {
+  const group = new THREE.Group();
+
+  const bodyMat  = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const headMat  = new THREE.MeshLambertMaterial({ color: headColor });
+  const legMat   = new THREE.MeshLambertMaterial({ color: 0x1a1a2e });
+  const armMat   = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const studMat  = new THREE.MeshLambertMaterial({ color: new THREE.Color(bodyColor).lerp(new THREE.Color(0xffffff), 0.15) });
+  const faceMat  = new THREE.MeshLambertMaterial({ color: 0x222222 }); // simplified face
+
+  // Torso
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 0.3), bodyMat);
+  torso.position.y = 0.75;
+  torso.castShadow = true;
+  group.add(torso);
+
+  // Torso stud top (decorative)
+  const studGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.06, 8);
+  [-0.15, 0.15].forEach(x => {
+    const stud = new THREE.Mesh(studGeo, studMat);
+    stud.position.set(x, 1.045, 0);
+    group.add(stud);
+  });
+
+  // Head
+  const headGeo = new THREE.BoxGeometry(0.48, 0.44, 0.44);
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.position.y = 1.28;
+  head.castShadow = true;
+  group.add(head);
+
+  // Head stud
+  const headStud = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.09, 8), studMat);
+  headStud.position.y = 1.545;
+  group.add(headStud);
+
+  // Legs
+  const legGeo = new THREE.BoxGeometry(0.24, 0.4, 0.28);
+  const legL = new THREE.Mesh(legGeo, legMat);
+  legL.position.set(-0.16, 0.35, 0);
+  legL.castShadow = true;
+  group.add(legL);
+
+  const legR = new THREE.Mesh(legGeo, legMat.clone());
+  legR.position.set(0.16, 0.35, 0);
+  legR.castShadow = true;
+  group.add(legR);
+
+  // Feet
+  const footGeo = new THREE.BoxGeometry(0.26, 0.1, 0.32);
+  const footMat = new THREE.MeshLambertMaterial({ color: 0x0f0f1e });
+  [-0.16, 0.16].forEach(x => {
+    const foot = new THREE.Mesh(footGeo, footMat);
+    foot.position.set(x, 0.15, 0.02);
+    group.add(foot);
+  });
+
+  // Arms
+  const armGeo = new THREE.BoxGeometry(0.14, 0.38, 0.22);
+  const armL = new THREE.Mesh(armGeo, armMat);
+  armL.position.set(-0.39, 0.78, 0);
+  armL.castShadow = true;
+  group.add(armL);
+
+  const armR = new THREE.Mesh(armGeo, armMat.clone());
+  armR.position.set(0.39, 0.78, 0);
+  armR.castShadow = true;
+  group.add(armR);
+
+  // Hands
+  const handGeo = new THREE.SphereGeometry(0.09, 6, 6);
+  const handMat = new THREE.MeshLambertMaterial({ color: 0xffd700 });
+  [-0.39, 0.39].forEach(x => {
+    const hand = new THREE.Mesh(handGeo, handMat);
+    hand.position.set(x, 0.57, 0);
+    group.add(hand);
+  });
+
+  // Floating name label (sprite)
+  if (name) {
+    const canvas2 = document.createElement('canvas');
+    canvas2.width = 256; canvas2.height = 64;
+    const ctx = canvas2.getContext('2d');
+    ctx.fillStyle = 'rgba(12,18,32,0.9)';
+    ctx.roundRect(4, 4, 248, 56, 12);
+    ctx.fill();
+    ctx.strokeStyle = `#${bodyColor.toString(16).padStart(6,'0')}`;
+    ctx.lineWidth = 2;
+    ctx.roundRect(4, 4, 248, 56, 12);
+    ctx.stroke();
+    ctx.font = 'bold 22px SF Mono, monospace';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, 128, 32);
+    const tex = new THREE.CanvasTexture(canvas2);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    sprite.scale.set(1.4, 0.35, 1);
+    sprite.position.y = 2.3;
+    group.add(sprite);
+  }
+
+  group.userData = { legL, legR, armL, armR, head };
+  return group;
+}
+
+// ── Agent definitions ──
+const AGENT_DEFS = [
+  { name: '🔬 analyst', color: 0x7c3aed, headColor: 0xfbbf24, startPos: [-3, 0, -2] },
+  { name: '✍️ writer',  color: 0x059669, headColor: 0xfde68a, startPos: [2, 0, -3]  },
+  { name: '🔍 reviewer',color: 0xd97706, headColor: 0xfef3c7, startPos: [0, 0, 2]   },
+];
+
+const agents = AGENT_DEFS.map(def => {
+  const lego = makeLego(def.color, def.headColor, def.name);
+  lego.position.set(...def.startPos);
+  scene.add(lego);
+
+  return {
+    mesh: lego,
+    pos: new THREE.Vector3(...def.startPos),
+    target: new THREE.Vector3(...def.startPos),
+    path: [],
+    walkPhase: Math.random() * Math.PI * 2,
+    color: def.color,
+    name: def.name,
+    meetingTarget: null,
+  };
+});
+
+// Patrol waypoints per agent
+const PATROLS = [
+  [[-3,-2],[-1,-3],[-4,-1],[-2,-4]],
+  [[ 2,-3],[ 4,-1],[ 3, 1],[ 1,-2]],
+  [[ 0, 2],[ 2, 3],[-1, 3],[ 1, 4]],
+];
+
+const MEETING_POS = [
+  [-0.8, 0, 0.2],
+  [ 0.8, 0, 0.2],
+];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function pickPatrol(idx) {
+  if (meetingMode) return;
+  const a = agents[idx];
+  const pts = PATROLS[idx];
+  const pt = pts[Math.floor(Math.random() * pts.length)];
+  a.target.set(pt[0], 0, pt[1]);
+}
+
+agents.forEach((_, i) => setTimeout(() => pickPatrol(i), i * 600 + 200));
+
+// ── Speech bubbles (HTML overlaid) ──
+const bubbleEls = agents.map((a, i) => {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position:fixed; pointer-events:none;
+    background:rgba(12,18,32,0.92); border:1px solid #1e3a5f;
+    border-radius:10px; padding:5px 10px; font-size:9.5px; color:#94a3b8;
+    white-space:nowrap; font-family:SF Mono,monospace; z-index:10;
+    transition:opacity 0.3s; backdrop-filter:blur(4px);
+  `;
+  el.style.borderColor = '#' + a.color.toString(16).padStart(6,'0');
+  el.textContent = i === 0 ? '▶ read_file page.tsx' : i === 1 ? '초안 작성 중...' : '검토 완료 ✓';
+  document.body.appendChild(el);
+  return el;
+});
+
+// Meeting bubble
+const meetingEl = document.createElement('div');
+meetingEl.style.cssText = `
+  position:fixed; pointer-events:none; display:none;
+  background:rgba(12,18,32,0.94); border:1px solid #1e3a5f;
+  border-radius:12px; padding:10px 14px; font-size:9.5px;
+  font-family:SF Mono,monospace; z-index:10;
+  min-width:240px; backdrop-filter:blur(8px);
+  box-shadow:0 0 30px rgba(124,58,237,0.2);
+`;
+document.body.appendChild(meetingEl);
+
+// Project 3D→2D
+function worldToScreen(pos) {
+  const v = pos.clone().project(camera);
+  return {
+    x: (v.x * 0.5 + 0.5) * innerWidth,
+    y: (-v.y * 0.5 + 0.5) * (innerHeight - 34),
+  };
+}
+
+// ── Meeting ──
+let meetingMode = false;
+const M_LINES  = ['🔬 분석 완료. 컴포넌트 3개 문제.','✍️ 알겠어. 수정 초안 쓸게.','🔬 auth.ts 주의해줘.','✍️ 테스트도 같이 수정?'];
+const M_COLORS = ['#a78bfa','#4ade80','#a78bfa','#4ade80'];
+let mLines = [], mIdx = 0;
+
+function triggerMeeting() {
+  if (meetingMode) return;
+  meetingMode = true;
+  agents[0].target.set(...MEETING_POS[0]);
+  agents[1].target.set(...MEETING_POS[1]);
+  agents[0].path = [];
+  agents[1].path = [];
+  bubbleEls[0].style.opacity = '0';
+  bubbleEls[1].style.opacity = '0';
+  setTimeout(addLine, 2000);
+}
+
+function addLine() {
+  if (mIdx >= M_LINES.length) return;
+  mLines.push({ text: M_LINES[mIdx], color: M_COLORS[mIdx] });
+  renderMeetingBubble();
+  mIdx++;
+  setTimeout(addLine, 1700);
+}
+
+function renderMeetingBubble() {
+  let html = `<div style="font-size:8px;color:#d97706;letter-spacing:1px;border-bottom:1px solid #1e293b;padding-bottom:5px;margin-bottom:6px">📋 MEETING</div>`;
+  mLines.slice(-5).forEach(l => {
+    html += `<div style="color:${l.color};margin-bottom:3px">${l.text}</div>`;
+  });
+  if (mIdx < M_LINES.length) {
+    html += `<div style="opacity:0.5;margin-top:4px">
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4ade80;margin-right:3px;animation:blink 1s infinite"></span>
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4ade80;margin-right:3px;animation:blink 1s 0.2s infinite"></span>
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4ade80;animation:blink 1s 0.4s infinite"></span>
+    </div>`;
+  }
+  meetingEl.innerHTML = html;
+  meetingEl.style.display = 'block';
+}
+
+// ── Scroll zoom ──
+let zoomDist = 22;
+window.addEventListener('wheel', e => {
+  zoomDist = Math.max(10, Math.min(40, zoomDist + e.deltaY * 0.02));
+});
+
+// ── Animate ──
+const clock = new THREE.Clock();
+
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = clock.getDelta();
+  const t  = clock.getElapsedTime();
+
+  // Smooth zoom
+  const dir = camera.position.clone().normalize();
+  camera.position.lerp(dir.multiplyScalar(zoomDist), 0.08);
+  camera.lookAt(0, 0.5, 0);
+
+  agents.forEach((a, idx) => {
+    // Move toward target
+    const dx = a.target.x - a.pos.x;
+    const dz = a.target.z - a.pos.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    const walking = dist > 0.05;
+    const speed = 2.2;
+
+    if (walking) {
+      const step = Math.min(dist, speed * dt);
+      a.pos.x += (dx / dist) * step;
+      a.pos.z += (dz / dist) * step;
+      // Face direction of travel
+      a.mesh.rotation.y = Math.atan2(dx, dz);
+    } else if (!meetingMode) {
+      // Arrived — wait then pick next patrol
+      if (!a._patrolTimer) {
+        a._patrolTimer = setTimeout(() => {
+          a._patrolTimer = null;
+          pickPatrol(idx);
+        }, 800 + Math.random() * 1400);
+      }
+    }
+
+    a.mesh.position.set(a.pos.x, 0, a.pos.z);
+
+    // Walk animation
+    const ud = a.userData || a.mesh.userData;
+    if (walking) {
+      const phase = t * 8 + a.walkPhase;
+      ud.legL.rotation.x =  Math.sin(phase) * 0.45;
+      ud.legR.rotation.x = -Math.sin(phase) * 0.45;
+      ud.armL.rotation.x = -Math.sin(phase) * 0.35;
+      ud.armR.rotation.x =  Math.sin(phase) * 0.35;
+      a.mesh.position.y   =  Math.abs(Math.sin(phase * 0.5)) * 0.04;
+    } else {
+      // Idle bob
+      ud.legL.rotation.x *= 0.85;
+      ud.legR.rotation.x *= 0.85;
+      ud.armL.rotation.x *= 0.85;
+      ud.armR.rotation.x *= 0.85;
+      a.mesh.position.y = Math.sin(t * 1.8 + a.walkPhase) * 0.03;
+      // Idle head look
+      ud.head.rotation.y = Math.sin(t * 0.7 + a.walkPhase) * 0.15;
+    }
+
+    // Update bubble position
+    const sp = worldToScreen(a.pos.clone().add(new THREE.Vector3(0, 2.4, 0)));
+    const el = bubbleEls[idx];
+    el.style.left  = (sp.x - el.offsetWidth  / 2) + 'px';
+    el.style.top   = (sp.y - el.offsetHeight - 4) + 'px';
+  });
+
+  // Meeting bubble position (above midpoint of agents 0 and 1)
+  if (meetingMode && mLines.length > 0) {
+    const mid = agents[0].pos.clone().add(agents[1].pos).multiplyScalar(0.5);
+    mid.y = 2.8;
+    const sp = worldToScreen(mid);
+    meetingEl.style.left = (sp.x - 120) + 'px';
+    meetingEl.style.top  = (sp.y - meetingEl.offsetHeight - 8) + 'px';
+  }
+
+  renderer.render(scene, camera);
+}
+frame();
+
+// ── Keys ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'm' || e.key === 'M') triggerMeeting();
+  if (e.key === 'r' || e.key === 'R') location.reload();
+});
+
+// ── Blink keyframe ──
+const style = document.createElement('style');
+style.textContent = '@keyframes blink{0%,100%{opacity:0.2}50%{opacity:1}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>

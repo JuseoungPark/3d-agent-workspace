@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Lego Precise Body v3</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#020617; overflow:hidden; font-family:'SF Mono',monospace; display:flex; height:100vh; }
+#left { flex:1; position:relative; }
+#c { display:block; width:100%; height:100%; }
+#panel {
+  width:230px; background:#080d14; border-left:1px solid #0f172a;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#ph { padding:12px 14px 8px; border-bottom:1px solid #0f172a; font-size:8px; letter-spacing:2px; color:#334155; }
+#ph .an { font-size:13px; color:#e2e8f0; letter-spacing:0; margin-top:3px; }
+#pb { flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:12px; }
+#pb::-webkit-scrollbar { width:3px; }
+#pb::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
+.st { font-size:7.5px; color:#334155; letter-spacing:2px; margin-bottom:5px; }
+.fg { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+.fo { aspect-ratio:1; border-radius:6px; border:1.5px solid #1e293b; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; background:#0a0f1a; transition:border-color .15s,transform .1s; }
+.fo:hover { border-color:#334155; transform:scale(1.08); }
+.fo.sel { border-color:#7c3aed; box-shadow:0 0 6px #7c3aed55; }
+.hg { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
+.ho { aspect-ratio:1; border-radius:6px; border:1.5px solid #1e293b; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; background:#0a0f1a; transition:border-color .15s,transform .1s; padding:3px; }
+.ho:hover { border-color:#334155; transform:scale(1.08); }
+.ho.sel { border-color:#059669; box-shadow:0 0 6px #05966955; }
+.hi { font-size:14px; }
+.hl { font-size:6.5px; color:#475569; }
+.cr { display:flex; gap:4px; flex-wrap:wrap; }
+.sw { width:24px; height:24px; border-radius:5px; cursor:pointer; border:2px solid transparent; transition:transform .1s,border-color .15s; }
+.sw:hover { transform:scale(1.18); }
+.sw.sel { border-color:white; }
+.at { display:flex; gap:3px; }
+.ab { flex:1; padding:5px 3px; border-radius:5px; border:1px solid #1e293b; cursor:pointer; text-align:center; font-size:10px; transition:background .15s,border-color .15s; }
+.ab:hover { background:#0f172a; }
+.ab.sel { border-color:#7c3aed; background:#1a0d2e; }
+#kbd { position:absolute; bottom:10px; left:14px; font-size:9px; color:#1e3a5f; }
+kbd { background:#0a0f1a; border:1px solid #1e293b; border-radius:3px; padding:1px 5px; color:#334155; font-family:inherit; }
+</style>
+</head>
+<body>
+<div id="left"><canvas id="c"></canvas>
+<div id="kbd"><kbd>M</kbd> meeting &nbsp;<kbd>R</kbd> reset &nbsp;<kbd>scroll</kbd> zoom</div>
+</div>
+<div id="panel">
+  <div id="ph">AVATAR EDITOR<div class="an" id="an">🔬 analyst</div></div>
+  <div id="pb">
+    <div><div class="st">AGENT</div><div class="at">
+      <div class="ab sel" onclick="sA(0)">🔬<br><span style="font-size:6.5px;color:#475569">analyst</span></div>
+      <div class="ab" onclick="sA(1)">✍️<br><span style="font-size:6.5px;color:#475569">writer</span></div>
+      <div class="ab" onclick="sA(2)">🔍<br><span style="font-size:6.5px;color:#475569">reviewer</span></div>
+    </div></div>
+    <div><div class="st">FACE</div><div class="fg" id="fg">
+      <div class="fo sel" onclick="aF(this,'😐')">😐</div><div class="fo" onclick="aF(this,'🙂')">🙂</div>
+      <div class="fo" onclick="aF(this,'😤')">😤</div><div class="fo" onclick="aF(this,'🤔')">🤔</div>
+      <div class="fo" onclick="aF(this,'😎')">😎</div><div class="fo" onclick="aF(this,'🧐')">🧐</div>
+      <div class="fo" onclick="aF(this,'😈')">😈</div><div class="fo" onclick="aF(this,'🤖')">🤖</div>
+      <div class="fo" onclick="aF(this,'😴')">😴</div><div class="fo" onclick="aF(this,'😡')">😡</div>
+      <div class="fo" onclick="aF(this,'🥸')">🥸</div><div class="fo" onclick="aF(this,'🥳')">🥳</div>
+    </div></div>
+    <div><div class="st">HAIR</div><div class="hg">
+      <div class="ho sel" onclick="aH(this,'SHORT')"><div class="hi">▬</div><div class="hl">SHORT</div></div>
+      <div class="ho" onclick="aH(this,'LONG')"><div class="hi">⬇</div><div class="hl">LONG</div></div>
+      <div class="ho" onclick="aH(this,'SPIKY')"><div class="hi">⚡</div><div class="hl">SPIKY</div></div>
+      <div class="ho" onclick="aH(this,'BUN')"><div class="hi">⭕</div><div class="hl">BUN</div></div>
+      <div class="ho" onclick="aH(this,'CURLY')"><div class="hi">🌀</div><div class="hl">CURLY</div></div>
+      <div class="ho" onclick="aH(this,'HELMET')"><div class="hi">⛑</div><div class="hl">HELMET</div></div>
+      <div class="ho" onclick="aH(this,'PONYTAIL')"><div class="hi">🎀</div><div class="hl">PONYTAIL</div></div>
+      <div class="ho" onclick="aH(this,'BALD')"><div class="hi">○</div><div class="hl">BALD</div></div>
+    </div></div>
+    <div><div class="st">HAIR COLOR</div><div class="cr" id="hc">
+      <div class="sw sel" style="background:#1a1a1a" onclick="aHC(this,'#1a1a1a')"></div>
+      <div class="sw" style="background:#4a2800" onclick="aHC(this,'#4a2800')"></div>
+      <div class="sw" style="background:#b07030" onclick="aHC(this,'#b07030')"></div>
+      <div class="sw" style="background:#f0c040" onclick="aHC(this,'#f0c040')"></div>
+      <div class="sw" style="background:#d0d0d0" onclick="aHC(this,'#d0d0d0')"></div>
+      <div class="sw" style="background:#ff6060" onclick="aHC(this,'#ff6060')"></div>
+      <div class="sw" style="background:#5080ff" onclick="aHC(this,'#5080ff')"></div>
+      <div class="sw" style="background:#7c3aed" onclick="aHC(this,'#7c3aed')"></div>
+    </div></div>
+    <div><div class="st">OUTFIT</div><div class="cr" id="bc">
+      <div class="sw sel" style="background:#7c3aed" onclick="aBC(this,'#7c3aed')"></div>
+      <div class="sw" style="background:#059669" onclick="aBC(this,'#059669')"></div>
+      <div class="sw" style="background:#d97706" onclick="aBC(this,'#d97706')"></div>
+      <div class="sw" style="background:#2563eb" onclick="aBC(this,'#2563eb')"></div>
+      <div class="sw" style="background:#dc2626" onclick="aBC(this,'#dc2626')"></div>
+      <div class="sw" style="background:#0891b2" onclick="aBC(this,'#0891b2')"></div>
+      <div class="sw" style="background:#be185d" onclick="aBC(this,'#be185d')"></div>
+      <div class="sw" style="background:#334155" onclick="aBC(this,'#334155')"></div>
+    </div></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+function resize() {
+  const w = document.getElementById('left').clientWidth, h = innerHeight;
+  renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020617);
+scene.fog = new THREE.FogExp2(0x020617, 0.027);
+
+const camera = new THREE.PerspectiveCamera(42,1,0.1,200);
+camera.position.set(10,13,10); camera.lookAt(0,0.5,0);
+
+scene.add(new THREE.AmbientLight(0x1a2a4a, 2.5));
+const sun = new THREE.DirectionalLight(0xffffff,3.5);
+sun.position.set(8,18,8); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=0.1; sun.shadow.camera.far=60;
+sun.shadow.camera.left=sun.shadow.camera.bottom=-16;
+sun.shadow.camera.right=sun.shadow.camera.top=16;
+sun.shadow.bias=-0.001; scene.add(sun);
+const fill=new THREE.DirectionalLight(0x3355bb,1.0); fill.position.set(-4,5,-6); scene.add(fill);
+
+resize(); window.addEventListener('resize',resize);
+
+// Floor
+const tg=new THREE.BoxGeometry(0.97,0.1,0.97);
+for(let x=-7;x<=7;x++) for(let z=-7;z<=7;z++){
+  const m=new THREE.MeshLambertMaterial({color:(x+z)%2===0?0x0b1728:0x0d1e35});
+  const t=new THREE.Mesh(tg,m); t.position.set(x,-0.05,z); t.receiveShadow=true; scene.add(t);
+}
+const grid=new THREE.GridHelper(15,15,0x1e3a5f,0x1e3a5f);
+grid.position.y=0.01; grid.material.opacity=0.3; grid.material.transparent=true; scene.add(grid);
+
+// ── FACE TEXTURE ──
+function makeFaceTex(emoji) {
+  const W=512,H=256,cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#ffd700'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fillRect(0,H*0.88,W,H*0.12);
+  const er=H*0.12, eyeY=H*0.34;
+  // Eyes
+  [[-1,1],[1,1]].forEach(([s])=>{
+    const ex=W/2+s*er*2.4;
+    ctx.beginPath(); ctx.ellipse(ex,eyeY,er*1.1,er,0,0,Math.PI*2); ctx.fillStyle='white'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ex+2,eyeY+1,er*0.55,er*0.62,0,0,Math.PI*2); ctx.fillStyle='#1a1a2e'; ctx.fill();
+    ctx.beginPath(); ctx.arc(ex-er*0.3,eyeY-er*0.3,er*0.22,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.fill();
+  });
+  // Eyebrows
+  [[-1,1],[1,1]].forEach(([s])=>{
+    const ex=W/2+s*er*2.4;
+    ctx.beginPath(); ctx.moveTo(ex-er*1.1,eyeY-er*1.6); ctx.quadraticCurveTo(ex,eyeY-er*2.1,ex+er*1.1,eyeY-er*1.6);
+    ctx.strokeStyle='#3a2200'; ctx.lineWidth=5.5; ctx.lineCap='round'; ctx.stroke();
+  });
+  // Nose dots
+  ctx.beginPath(); ctx.arc(W/2-5,H*0.52,3.5,0,Math.PI*2); ctx.arc(W/2+5,H*0.52,3.5,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fill();
+
+  const sm=(emoji)=>{
+    const mouthMap={
+      '😐':()=>{ ctx.beginPath(); ctx.moveTo(W/2-er*1.2,H*0.68); ctx.lineTo(W/2+er*1.2,H*0.68); ctx.strokeStyle='#3a2200'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.stroke(); },
+      '🙂':()=>arc(ctx,W/2,H*0.66,er*1.3,false),
+      '😤':()=>{ arc(ctx,W/2,H*0.71,er*1.1,true); angryBrow(ctx,W/2,eyeY,er,1); },
+      '🤔':()=>{ arc(ctx,W/2+8,H*0.68,er*0.9,false); thinkBrow(ctx,W/2,eyeY,er); },
+      '😎':()=>{ coolGlasses(ctx,W/2,eyeY,er); arc(ctx,W/2,H*0.67,er*1.2,false); },
+      '🧐':()=>{ monocle(ctx,W/2+er*1.3,eyeY,er); arc(ctx,W/2,H*0.67,er,false); },
+      '😴':()=>{ sleepEyes(ctx,W/2,eyeY,er); arc(ctx,W/2,H*0.68,er*0.8,false); },
+      '🥸':()=>{ bigGlasses(ctx,W/2,eyeY,er); arc(ctx,W/2,H*0.67,er*1.1,false); },
+      '😈':()=>{ arc(ctx,W/2,H*0.67,er*1.2,false); devilBrow(ctx,W/2,eyeY,er); },
+      '🤖':()=>{ robotEyes(ctx,W/2,eyeY,er); robotMouth(ctx,W/2,H*0.67,er); },
+      '😡':()=>{ arc(ctx,W/2,H*0.71,er*1.1,true); angryBrow(ctx,W/2,eyeY,er,2); },
+      '🥳':()=>{ arc(ctx,W/2,H*0.66,er*1.3,false); },
+    };
+    (mouthMap[emoji]||mouthMap['😐'])();
+  };
+  sm(emoji);
+  return new THREE.CanvasTexture(cv);
+}
+
+function arc(ctx,cx,cy,r,frown){
+  ctx.beginPath(); ctx.arc(cx,frown?cy-r*0.6:cy,r,frown?0:Math.PI*0.1,frown?Math.PI:Math.PI*0.9);
+  ctx.strokeStyle='#3a2200'; ctx.lineWidth=6; ctx.lineCap='round'; ctx.stroke();
+}
+function angryBrow(ctx,cx,ey,er,t){
+  const tilt=t===1?0.15:0.22;
+  [[-1,tilt],[1,-tilt]].forEach(([s,tl])=>{
+    const ex=cx+s*er*2.4;
+    ctx.beginPath(); ctx.moveTo(ex-er*1.1,ey-er*1.4+tl*40); ctx.lineTo(ex+er*1.1,ey-er*1.4-tl*40);
+    ctx.strokeStyle='#3a2200'; ctx.lineWidth=7; ctx.lineCap='round'; ctx.stroke();
+  });
+}
+function devilBrow(ctx,cx,ey,er){
+  [[-1,-0.15],[1,0.15]].forEach(([s,tl])=>{
+    const ex=cx+s*er*2.4;
+    ctx.beginPath(); ctx.moveTo(ex-er*1.1,ey-er*1.4+tl*40); ctx.lineTo(ex+er*1.1,ey-er*1.4-tl*40);
+    ctx.strokeStyle='#4a0080'; ctx.lineWidth=7; ctx.lineCap='round'; ctx.stroke();
+  });
+}
+function thinkBrow(ctx,cx,ey,er){
+  const ex=cx+er*2.4;
+  ctx.beginPath(); ctx.moveTo(ex-er,ey-er*1.6); ctx.lineTo(ex+er,ey-er*1.1);
+  ctx.strokeStyle='#3a2200'; ctx.lineWidth=6; ctx.lineCap='round'; ctx.stroke();
+}
+function coolGlasses(ctx,cx,ey,er){
+  ctx.fillStyle='rgba(0,0,0,0.78)'; ctx.strokeStyle='#555'; ctx.lineWidth=4;
+  [[-1],[1]].forEach(([s])=>{
+    const ex=cx+s*er*2.4;
+    ctx.beginPath(); ctx.arc(ex,ey,er*1.2,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  });
+  ctx.strokeStyle='#888'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(cx-er*1.2,ey); ctx.lineTo(cx+er*1.2,ey); ctx.stroke();
+}
+function monocle(ctx,ex,ey,er){
+  ctx.strokeStyle='#b8860b'; ctx.lineWidth=4.5;
+  ctx.beginPath(); ctx.arc(ex,ey,er*1.3,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ex+er*1.3,ey+er*0.5); ctx.lineTo(ex+er*2.0,ey+er*2.0); ctx.stroke();
+}
+function sleepEyes(ctx,cx,ey,er){
+  [[-1],[1]].forEach(([s])=>{
+    const ex=cx+s*er*2.4;
+    ctx.beginPath(); ctx.moveTo(ex-er*1.1,ey); ctx.lineTo(ex+er*1.1,ey);
+    ctx.strokeStyle='#3a2200'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.stroke();
+    // zzz
+    if(s===1){ ctx.font='bold 22px serif'; ctx.fillStyle='rgba(80,80,80,0.5)'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText('zz',ex+er*1.3,ey-er*1.5); }
+  });
+}
+function bigGlasses(ctx,cx,ey,er){
+  ctx.strokeStyle='#4a3a00'; ctx.lineWidth=5;
+  [[-1],[1]].forEach(([s])=>{
+    const ex=cx+s*er*2.4;
+    ctx.beginPath(); ctx.arc(ex,ey,er*1.2,0,Math.PI*2); ctx.stroke();
+  });
+  ctx.beginPath(); ctx.moveTo(cx-er*1.2,ey); ctx.lineTo(cx+er*1.2,ey); ctx.stroke();
+}
+function robotEyes(ctx,cx,ey,er){
+  [[-1],[1]].forEach(([s])=>{
+    const ex=cx+s*er*2.2;
+    ctx.fillStyle='#00ff99'; ctx.strokeStyle='#00aa66'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.rect(ex-er,ey-er*0.7,er*2,er*1.4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(ex-er*0.45,ey-er*0.35,er*0.9,er*0.7);
+  });
+}
+function robotMouth(ctx,cx,cy,er){
+  ctx.strokeStyle='#00aa66'; ctx.lineWidth=4;
+  ctx.strokeRect(cx-er*1.4,cy-er*0.45,er*2.8,er*0.9);
+  for(let i=1;i<5;i++){
+    ctx.beginPath(); ctx.moveTo(cx-er*1.4+i*(er*2.8/5),cy-er*0.45); ctx.lineTo(cx-er*1.4+i*(er*2.8/5),cy+er*0.45);
+    ctx.strokeStyle='rgba(0,170,102,0.4)'; ctx.lineWidth=2; ctx.stroke();
+  }
+}
+
+// ── PRECISE HEAD ──
+function makeHead(emoji,skinHex=0xffd700){
+  const g=new THREE.Group();
+  const skin=new THREE.MeshLambertMaterial({color:skinHex});
+  // Cylinder body
+  const tex=makeFaceTex(emoji);
+  const cyl=new THREE.Mesh(new THREE.CylinderGeometry(0.235,0.245,0.44,32,1,true),new THREE.MeshLambertMaterial({map:tex}));
+  g.add(cyl);
+  // Caps
+  const tc=new THREE.Mesh(new THREE.CircleGeometry(0.235,32),skin.clone());
+  tc.rotation.x=-Math.PI/2; tc.position.y=0.22; g.add(tc);
+  const bc=new THREE.Mesh(new THREE.CircleGeometry(0.245,32),skin.clone());
+  bc.rotation.x=Math.PI/2; bc.position.y=-0.22; g.add(bc);
+  // Dome
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(0.235,32,16,0,Math.PI*2,0,Math.PI/2.2),skin.clone());
+  dome.position.y=0.19; g.add(dome);
+  // Neck peg
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.14,16),skin.clone());
+  neck.position.y=-0.29; g.add(neck);
+  // Stud
+  const stud=new THREE.Mesh(new THREE.CylinderGeometry(0.095,0.095,0.09,16),new THREE.MeshLambertMaterial({color:new THREE.Color(skinHex).lerp(new THREE.Color(0xffffff),0.12)}));
+  stud.position.y=0.33; g.add(stud);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.095,0.012,8,16),new THREE.MeshLambertMaterial({color:new THREE.Color(skinHex).lerp(new THREE.Color(0),0.1)}));
+  rim.position.y=0.375; rim.rotation.x=Math.PI/2; g.add(rim);
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  return g;
+}
+
+// ── PRECISE TORSO ──
+function makeTorso(colorHex){
+  const g=new THREE.Group();
+  const c=new THREE.Color(colorHex);
+  const mat=new THREE.MeshLambertMaterial({color:c});
+  const dark=new THREE.MeshLambertMaterial({color:c.clone().lerp(new THREE.Color(0),0.25)});
+  const stud=new THREE.MeshLambertMaterial({color:c.clone().lerp(new THREE.Color(0xffffff),0.18)});
+
+  // Main body — slightly wider shoulders, narrower waist
+  // Shoulder block
+  const shoulder=new THREE.Mesh(new THREE.BoxGeometry(0.68,0.18,0.34),mat.clone());
+  shoulder.position.y=0.18; g.add(shoulder);
+  // Mid section (slightly narrower)
+  const mid=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.22,0.33),mat.clone());
+  mid.position.y=-0.02; g.add(mid);
+  // Hip connector piece
+  const hip=new THREE.Mesh(new THREE.BoxGeometry(0.62,0.12,0.34),dark.clone());
+  hip.position.y=-0.19; g.add(hip);
+
+  // ── ARM SOCKET CONNECTORS (the round knobs on sides) ──
+  [-1,1].forEach(s=>{
+    // Outer socket housing
+    const socket=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.18,16),dark.clone());
+    socket.rotation.z=Math.PI/2; socket.position.set(s*0.38,0.13,0); g.add(socket);
+    // Inner socket hole indicator
+    const inner=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.06,12),new THREE.MeshLambertMaterial({color:new THREE.Color(colorHex).lerp(new THREE.Color(0),0.4)}));
+    inner.rotation.z=Math.PI/2; inner.position.set(s*0.435,0.13,0); g.add(inner);
+  });
+
+  // ── SHOULDER STUDS (2 top) ──
+  [-0.17,0.17].forEach(x=>{
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(0.078,0.078,0.065,12),stud);
+    st.position.set(x,0.3,0); g.add(st);
+  });
+
+  // ── NECK HOLE (subtle) ──
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,0.1,16),new THREE.MeshLambertMaterial({color:new THREE.Color(colorHex).lerp(new THREE.Color(0xffd700),0.6)}));
+  neck.position.y=0.32; g.add(neck);
+
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  return g;
+}
+
+// ── PRECISE ARMS ──
+function makeArm(colorHex, side) {
+  const g=new THREE.Group();
+  const c=new THREE.Color(colorHex);
+  const mat=new THREE.MeshLambertMaterial({color:c});
+
+  // Upper arm (angled box)
+  const upper=new THREE.Mesh(new THREE.BoxGeometry(0.155,0.28,0.22),mat.clone());
+  upper.position.y=-0.08; g.add(upper);
+
+  // Elbow joint (rounded)
+  const elbow=new THREE.Mesh(new THREE.SphereGeometry(0.085,10,8),mat.clone());
+  elbow.position.y=-0.22; g.add(elbow);
+
+  // Lower arm / forearm (slightly tapered)
+  const lower=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.16,0.2),mat.clone());
+  lower.position.y=-0.34; g.add(lower);
+
+  // Hand (yellow)
+  const hand=new THREE.Mesh(new THREE.SphereGeometry(0.093,10,8),new THREE.MeshLambertMaterial({color:0xffd700}));
+  hand.position.y=-0.47; g.add(hand);
+
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  return g;
+}
+
+// ── PRECISE HIPS + LEGS ──
+function makeHipsLegs(colorHex) {
+  const g=new THREE.Group();
+  const legC=new THREE.Color(0x1a1a2e);
+  const legMat=new THREE.MeshLambertMaterial({color:legC});
+  const darkLeg=new THREE.MeshLambertMaterial({color:legC.clone().lerp(new THREE.Color(0),0.2)});
+  const footMat=new THREE.MeshLambertMaterial({color:0x0f0f1e});
+  const beltMat=new THREE.MeshLambertMaterial({color:new THREE.Color(colorHex).lerp(new THREE.Color(0x000000),0.3)});
+
+  // Belt / waistband
+  const belt=new THREE.Mesh(new THREE.BoxGeometry(0.64,0.1,0.35),beltMat);
+  belt.position.y=0.02; g.add(belt);
+
+  // Hip piece (Y-shaped split)
+  const hipC=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.22,0.34),darkLeg.clone());
+  hipC.position.set(0,-0.11,0); g.add(hipC);
+
+  // Legs
+  [-1,1].forEach(s=>{
+    const leg=new THREE.Mesh(new THREE.BoxGeometry(0.26,0.42,0.3),legMat.clone());
+    leg.position.set(s*0.185,-0.27,0); leg.castShadow=true; g.add(leg);
+    // Knee detail
+    const knee=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.06,0.28),darkLeg.clone());
+    knee.position.set(s*0.185,-0.28,0.01); g.add(knee);
+    // Foot (larger, with toe)
+    const foot=new THREE.Mesh(new THREE.BoxGeometry(0.26,0.11,0.36),footMat.clone());
+    foot.position.set(s*0.185,-0.49,0.04); foot.castShadow=true; g.add(foot);
+  });
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  return g;
+}
+
+// ── HAIR ──
+function makeHair(style,color){
+  const g=new THREE.Group();
+  const mat=()=>new THREE.MeshLambertMaterial({color:new THREE.Color(color)});
+  switch(style){
+    case 'SHORT':{
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(0.255,0.255,0.13,24),mat());
+      m.position.y=0.065; g.add(m);
+      [-1,1].forEach(s=>{
+        const side=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.23,0.29),mat());
+        side.position.set(s*0.25,0,0.04); g.add(side);
+      });
+      break;
+    }
+    case 'LONG':{
+      const top=new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.1,24),mat());
+      top.position.y=0.05; g.add(top);
+      [-1,1].forEach(s=>{
+        const l=new THREE.Mesh(new THREE.BoxGeometry(0.11,0.72,0.29),mat());
+        l.position.set(s*0.25,-0.28,0.02); g.add(l);
+      });
+      const back=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.65,0.1),mat());
+      back.position.set(0,-0.23,-0.22); g.add(back);
+      break;
+    }
+    case 'SPIKY':{
+      const base=new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.08,24),mat());
+      base.position.y=0.04; g.add(base);
+      [[-0.14,0.38,0.02],[0,0.42,0.02],[0.14,0.38,0.02],[-0.07,0.34,-0.1],[0.07,0.34,-0.1]].forEach(([x,h,z])=>{
+        const s=new THREE.Mesh(new THREE.ConeGeometry(0.055,h,6),mat());
+        s.position.set(x,h/2,z); g.add(s);
+      });
+      break;
+    }
+    case 'BUN':{
+      const base=new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.1,24),mat());
+      base.position.y=0.05; g.add(base);
+      const bun=new THREE.Mesh(new THREE.SphereGeometry(0.18,16,12),mat());
+      bun.position.y=0.26; g.add(bun);
+      break;
+    }
+    case 'CURLY':{
+      const base=new THREE.Mesh(new THREE.CylinderGeometry(0.30,0.28,0.22,24),mat());
+      base.position.y=0.11; g.add(base);
+      [[0.26,0.08,0.1],[-0.26,0.08,0.1],[0.26,0.08,-0.1],[-0.26,0.08,-0.1],[0,0.28,0.22],[0,0.28,-0.22]].forEach(([x,y,z])=>{
+        const c=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8),mat());
+        c.position.set(x,y,z); g.add(c);
+      });
+      break;
+    }
+    case 'HELMET':{
+      const h=new THREE.Mesh(new THREE.CylinderGeometry(0.278,0.27,0.54,32),mat());
+      h.position.y=0.15; g.add(h);
+      const vis=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.15,0.06),new THREE.MeshLambertMaterial({color:0x111122,transparent:true,opacity:0.8}));
+      vis.position.set(0,0.04,0.265); g.add(vis);
+      break;
+    }
+    case 'PONYTAIL':{
+      const base=new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.1,24),mat());
+      base.position.y=0.05; g.add(base);
+      const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.04,0.58,12),mat());
+      tail.position.set(0,0.01,-0.29); tail.rotation.x=-0.3; g.add(tail);
+      break;
+    }
+    default: break;
+  }
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  return g;
+}
+
+// ── ASSEMBLE LEGO ──
+function buildLego(bodyHex,face='😐',hair='SHORT',hairHex='#1a1a1a'){
+  const g=new THREE.Group();
+
+  // Hips+legs (bottom)
+  const hips=makeHipsLegs(bodyHex);
+  hips.position.y=0.21; g.add(hips);
+
+  // Torso
+  const torso=makeTorso(bodyHex);
+  torso.position.y=0.82; g.add(torso);
+
+  // Arms (attached to torso socket level)
+  const armL=makeArm(bodyHex,-1);
+  armL.position.set(-0.435,0.95,0); g.add(armL);
+  const armR=makeArm(bodyHex,1);
+  armR.position.set(0.435,0.95,0); g.add(armR);
+
+  // Head
+  const head=makeHead(face,0xffd700);
+  head.position.y=1.38; g.add(head);
+
+  // Hair
+  const hairG=makeHair(hair,hairHex);
+  hairG.position.y=1.625; g.add(hairG);
+
+  g.traverse(c=>{if(c.isMesh)c.castShadow=true;});
+  g.userData={armL,armR,head,hips};
+  return g;
+}
+
+// ── AGENTS ──
+const DEFS=[
+  {name:'🔬 analyst',color:'#7c3aed',face:'😐',hair:'SHORT',hairColor:'#1a1a1a',pos:[-3,0,-2]},
+  {name:'✍️ writer', color:'#059669',face:'🙂',hair:'LONG', hairColor:'#b07030',pos:[2,0,-3]},
+  {name:'🔍 reviewer',color:'#d97706',face:'🧐',hair:'BALD', hairColor:'#1a1a1a',pos:[0,0,2]},
+];
+const agents=DEFS.map(d=>{
+  const mesh=buildLego(d.color,d.face,d.hair,d.hairColor);
+  mesh.position.set(...d.pos); scene.add(mesh);
+  return{mesh,...d,pos:new THREE.Vector3(...d.pos),target:new THREE.Vector3(...d.pos),walkPhase:Math.random()*Math.PI*2,_pt:null};
+});
+
+const PAT=[
+  [[-3,-2],[-1,-3],[-4,-1],[-2,-4]],
+  [[2,-3],[4,-1],[3,1],[1,-2]],
+  [[0,2],[2,3],[-1,3],[1,4]],
+];
+let meetingMode=false,selIdx=0;
+
+function patrol(i){
+  if(meetingMode)return;
+  const a=agents[i],pts=PAT[i],pt=pts[Math.floor(Math.random()*pts.length)];
+  a.target.set(pt[0],0,pt[1]);
+}
+agents.forEach((_,i)=>setTimeout(()=>patrol(i),i*600+300));
+
+function rebuild(i){
+  const a=agents[i]; scene.remove(a.mesh);
+  const m=buildLego(a.color,a.face,a.hair,a.hairColor);
+  m.position.copy(a.pos); m.rotation.y=a.mesh.rotation.y;
+  scene.add(m); a.mesh=m;
+}
+
+window.sA=i=>{ selIdx=i; document.getElementById('an').textContent=agents[i].name; document.querySelectorAll('.ab').forEach((e,j)=>e.classList.toggle('sel',j===i)); };
+window.aF=(el,f)=>{ agents[selIdx].face=f; rebuild(selIdx); document.querySelectorAll('.fo').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+window.aH=(el,s)=>{ agents[selIdx].hair=s; rebuild(selIdx); document.querySelectorAll('.ho').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+window.aHC=(el,c)=>{ agents[selIdx].hairColor=c; rebuild(selIdx); document.querySelectorAll('#hc .sw').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+window.aBC=(el,c)=>{ agents[selIdx].color=c; rebuild(selIdx); document.querySelectorAll('#bc .sw').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+
+let zoomDist=21;
+window.addEventListener('wheel',e=>{ zoomDist=Math.max(8,Math.min(36,zoomDist+e.deltaY*0.018)); });
+
+const clock=new THREE.Clock();
+function frame(){
+  requestAnimationFrame(frame);
+  const dt=Math.min(clock.getDelta(),0.05),t=clock.getElapsedTime();
+  const dir=camera.position.clone().normalize().multiplyScalar(zoomDist);
+  camera.position.lerp(dir,0.07); camera.lookAt(0,0.7,0);
+
+  agents.forEach((a,i)=>{
+    const dx=a.target.x-a.pos.x,dz=a.target.z-a.pos.z;
+    const dist=Math.sqrt(dx*dx+dz*dz),walking=dist>0.06;
+    if(walking){
+      const step=Math.min(dist,2.2*dt);
+      a.pos.x+=dx/dist*step; a.pos.z+=dz/dist*step;
+      a.mesh.rotation.y=Math.atan2(dx,dz);
+    } else if(!meetingMode&&!a._pt){
+      a._pt=setTimeout(()=>{ a._pt=null; patrol(i); },900+Math.random()*1300);
+    }
+    a.mesh.position.set(a.pos.x,0,a.pos.z);
+    const ud=a.mesh.userData;
+    if(walking){
+      const ph=t*8+a.walkPhase;
+      // Swing whole arm groups
+      if(ud.armL) ud.armL.rotation.x=-Math.sin(ph)*0.35;
+      if(ud.armR) ud.armR.rotation.x= Math.sin(ph)*0.35;
+      // Swing hips/legs via hips group children
+      if(ud.hips){
+        ud.hips.children.forEach((c,ci)=>{
+          if(ci>=2){ // legs start at index 2
+            c.rotation.x=(ci%2===0?1:-1)*Math.sin(ph)*0.42;
+          }
+        });
+      }
+      a.mesh.position.y=Math.abs(Math.sin(ph*0.5))*0.05;
+    } else {
+      if(ud.armL) ud.armL.rotation.x*=0.88;
+      if(ud.armR) ud.armR.rotation.x*=0.88;
+      if(ud.hips) ud.hips.children.forEach(c=>{ c.rotation.x*=0.88; });
+      a.mesh.position.y=Math.sin(t*1.8+a.walkPhase)*0.025;
+      if(ud.head) ud.head.rotation.y=Math.sin(t*0.6+a.walkPhase)*0.12;
+    }
+  });
+  renderer.render(scene,camera);
+}
+frame();
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='m'||e.key==='M'){ meetingMode=true; agents[0].target.set(-0.8,0,0.2); agents[1].target.set(0.8,0,0.2); }
+  if(e.key==='r'||e.key==='R') location.reload();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Agent Workspace — Walking Demo</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#020617; color:#e2e8f0; font-family:'SF Mono','Fira Code',monospace; overflow:hidden; height:100vh; display:flex; flex-direction:column; }
+
+#titlebar {
+  height:28px; background:#0a0f1a; border-bottom:1px solid #1e293b;
+  display:flex; align-items:center; padding:0 12px; gap:6px; flex-shrink:0;
+}
+.dot{width:10px;height:10px;border-radius:50%;}
+.dot.r{background:#ef4444}.dot.y{background:#f59e0b}.dot.g{background:#22c55e}
+#titlebar span{font-size:10px;color:#475569;margin-left:8px}
+.badge{margin-left:auto;font-size:9px;color:#334155;border:1px solid #1e293b;padding:2px 8px;border-radius:10px}
+
+#viewport { flex:1; position:relative; overflow:hidden; background:radial-gradient(ellipse at 50% 35%,#0d1b2e 0%,#020617 65%); }
+
+canvas { position:absolute; top:0; left:0; }
+
+/* HUD */
+#hud { position:absolute; top:12px; right:14px; display:flex; flex-direction:column; gap:5px; }
+.hud-card {
+  background:rgba(8,13,22,0.88); border:1px solid #1e293b; border-radius:7px;
+  padding:6px 10px; min-width:148px; backdrop-filter:blur(6px);
+}
+.hud-name { font-size:9px; letter-spacing:1.5px; margin-bottom:3px; }
+.hud-task { font-size:8px; color:#475569; margin-bottom:4px; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hud-bar { height:2px; background:#1e293b; border-radius:1px; }
+.hud-fill { height:100%; border-radius:1px; transition:width 2s ease; }
+
+#kbd { position:absolute; bottom:10px; left:14px; font-size:9px; color:#1e3a5f; }
+kbd { background:#0a0f1a; border:1px solid #1e293b; border-radius:3px; padding:1px 5px; color:#334155; font-family:inherit; }
+
+/* Stream */
+#stream {
+  height:34px; background:#060b12; border-top:1px solid #0f172a;
+  display:flex; align-items:center; padding:0 52px 0 52px; gap:0;
+  flex-shrink:0; overflow:hidden; position:relative;
+}
+#stream::before { content:'LIVE'; position:absolute; left:10px; font-size:7px; color:#ef4444; letter-spacing:2px; border:1px solid #ef444433; border-radius:2px; padding:1px 4px; }
+#stream-scroll { display:flex; gap:0; align-items:center; transition:transform 0.5s ease; }
+.se { font-size:10px; white-space:nowrap; padding:0 16px; border-right:1px solid #0f172a; }
+.se:last-child { border-right:none; }
+
+body.full #stream { display:none; }
+body.full #hud { display:none; }
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+  <span>agent-workspace — v2 walking demo</span>
+  <div class="badge" id="badge">3 agents active</div>
+</div>
+
+<div id="viewport">
+  <canvas id="c"></canvas>
+
+  <div id="hud">
+    <div class="hud-card">
+      <div class="hud-name" style="color:#a78bfa">🔬 ANALYST</div>
+      <div class="hud-task" id="t0">read_file app/page.tsx</div>
+      <div class="hud-bar"><div class="hud-fill" id="b0" style="width:60%;background:#7c3aed"></div></div>
+    </div>
+    <div class="hud-card">
+      <div class="hud-name" style="color:#4ade80">✍️ WRITER</div>
+      <div class="hud-task" id="t1">초안 작성 중...</div>
+      <div class="hud-bar"><div class="hud-fill" id="b1" style="width:35%;background:#059669"></div></div>
+    </div>
+    <div class="hud-card">
+      <div class="hud-name" style="color:#fbbf24">🔍 REVIEWER</div>
+      <div class="hud-task" id="t2">lint 검사 완료 ✓</div>
+      <div class="hud-bar"><div class="hud-fill" id="b2" style="width:100%;background:#d97706"></div></div>
+    </div>
+  </div>
+
+  <div id="kbd"><kbd>M</kbd> meeting &nbsp;<kbd>F</kbd> fullscreen &nbsp;<kbd>R</kbd> reset</div>
+</div>
+
+<div id="stream">
+  <div id="stream-scroll">
+    <div class="se"><span style="color:#a78bfa">🔬 analyst</span> <span style="color:#334155">›</span> <span style="color:#64748b">read_file app/page.tsx</span></div>
+    <div class="se"><span style="color:#4ade80">✍️ writer</span> <span style="color:#334155">›</span> <span style="color:#4ade80">"컴포넌트 구조 파악, 초안 시작"</span></div>
+    <div class="se"><span style="color:#fbbf24">🔍 reviewer</span> <span style="color:#334155">›</span> <span style="color:#64748b">npm run lint → 0 errors</span></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// ── Resize ──
+function resize() {
+  const vp = document.getElementById('viewport');
+  canvas.width  = vp.clientWidth;
+  canvas.height = vp.clientHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Isometric helpers ──
+const TILE_W = 72, TILE_H = 36;
+
+// Grid to screen (isometric projection)
+// Origin at center of screen
+function gridToScreen(gx, gy) {
+  const cx = canvas.width  * 0.5;
+  const cy = canvas.height * 0.42;
+  const sx = (gx - gy) * (TILE_W / 2);
+  const sy = (gx + gy) * (TILE_H / 2);
+  return { x: cx + sx, y: cy + sy };
+}
+
+// ── Draw floor tile ──
+function drawTile(gx, gy, fill, stroke) {
+  const c = gridToScreen(gx, gy);
+  const hw = TILE_W / 2, hh = TILE_H / 2;
+  ctx.beginPath();
+  ctx.moveTo(c.x,      c.y - hh);
+  ctx.lineTo(c.x + hw, c.y);
+  ctx.lineTo(c.x,      c.y + hh);
+  ctx.lineTo(c.x - hw, c.y);
+  ctx.closePath();
+  ctx.fillStyle   = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth   = 0.6;
+  ctx.fill();
+  ctx.stroke();
+}
+
+// ── Draw iso box (agent) ──
+function drawBox(gx, gy, h, topColor, leftColor, rightColor, alpha) {
+  const c  = gridToScreen(gx, gy);
+  const hw = TILE_W / 2, hh = TILE_H / 2;
+  ctx.globalAlpha = alpha || 1;
+
+  // Left face
+  ctx.beginPath();
+  ctx.moveTo(c.x - hw, c.y);
+  ctx.lineTo(c.x,      c.y + hh);
+  ctx.lineTo(c.x,      c.y + hh - h);
+  ctx.lineTo(c.x - hw, c.y - h);
+  ctx.closePath();
+  ctx.fillStyle = leftColor;
+  ctx.fill();
+
+  // Right face
+  ctx.beginPath();
+  ctx.moveTo(c.x + hw, c.y);
+  ctx.lineTo(c.x,      c.y + hh);
+  ctx.lineTo(c.x,      c.y + hh - h);
+  ctx.lineTo(c.x + hw, c.y - h);
+  ctx.closePath();
+  ctx.fillStyle = rightColor;
+  ctx.fill();
+
+  // Top face
+  ctx.beginPath();
+  ctx.moveTo(c.x,      c.y - hh - h);
+  ctx.lineTo(c.x + hw, c.y - h);
+  ctx.lineTo(c.x,      c.y + hh - h);
+  ctx.lineTo(c.x - hw, c.y - h);
+  ctx.closePath();
+  ctx.fillStyle = topColor;
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
+// ── Draw emoji on box top ──
+function drawEmoji(gx, gy, h, emoji, bob) {
+  const c = gridToScreen(gx, gy);
+  ctx.font = '18px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, c.x, c.y - h - 4 + (bob || 0));
+}
+
+// ── Draw simple speech bubble ──
+function drawBubble(x, y, text, color, bgColor) {
+  const pad = 7, r = 9;
+  ctx.font = '10px SF Mono, Fira Code, monospace';
+  const w = ctx.measureText(text).width + pad * 2;
+  const h = 20;
+  const bx = x - w / 2, by = y - h - 14;
+
+  // Bubble body
+  ctx.beginPath();
+  ctx.roundRect(bx, by, w, h, r);
+  ctx.fillStyle = bgColor || '#0f172a';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // Arrow
+  ctx.beginPath();
+  ctx.moveTo(x - 5, by + h);
+  ctx.lineTo(x,     by + h + 7);
+  ctx.lineTo(x + 5, by + h);
+  ctx.fillStyle = bgColor || '#0f172a';
+  ctx.fill();
+
+  // Text
+  ctx.fillStyle = color;
+  ctx.font = '9.5px SF Mono, Fira Code, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, by + h / 2);
+}
+
+// ── Draw meeting bubble ──
+function drawMeetingBubble(x, y, lines, colors, showTyping) {
+  const lineH = 15, padX = 12, padY = 10, r = 8;
+  const titleH = 18;
+  const visLines = lines.filter((_, i) => !showTyping || i < lines.length);
+  const w = 230;
+  const h = titleH + visLines.length * lineH + padY * 2 - 4;
+  const bx = x - w / 2, by = y - h - 10;
+
+  // Shadow glow
+  ctx.shadowColor = '#7c3aed44';
+  ctx.shadowBlur  = 20;
+
+  ctx.beginPath();
+  ctx.roundRect(bx, by, w, h, r);
+  ctx.fillStyle   = '#0c1220';
+  ctx.fill();
+  ctx.strokeStyle = '#1e3a5f';
+  ctx.lineWidth   = 1;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Arrow
+  ctx.beginPath();
+  ctx.moveTo(x - 6, by + h);
+  ctx.lineTo(x,     by + h + 9);
+  ctx.lineTo(x + 6, by + h);
+  ctx.fillStyle = '#0c1220';
+  ctx.fill();
+
+  // Title
+  ctx.font = 'bold 8px SF Mono, Fira Code, monospace';
+  ctx.fillStyle = '#d97706';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('📋  MEETING', bx + padX, by + padY + 4);
+
+  // Divider
+  ctx.beginPath();
+  ctx.moveTo(bx + 6, by + titleH + 2);
+  ctx.lineTo(bx + w - 6, by + titleH + 2);
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth   = 0.6;
+  ctx.stroke();
+
+  // Lines
+  ctx.font = '9px SF Mono, Fira Code, monospace';
+  ctx.textBaseline = 'top';
+  visLines.forEach((line, i) => {
+    const ty = by + titleH + padY + i * lineH;
+    ctx.fillStyle = colors[i] || '#94a3b8';
+    ctx.fillText(line, bx + padX, ty);
+  });
+
+  // Typing dots
+  if (showTyping) {
+    const ty = by + h - padY - 6;
+    const tx = bx + padX + 22;
+    const t = Date.now() / 400;
+    [0, 1, 2].forEach(i => {
+      const a = 0.3 + 0.7 * Math.abs(Math.sin(t - i * 0.6));
+      ctx.beginPath();
+      ctx.arc(tx + i * 8, ty, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(74,222,128,${a})`;
+      ctx.fill();
+    });
+  }
+}
+
+// ── Agent state ──
+const AGENTS = [
+  {
+    id: 0, emoji: '🔬',
+    pos: { x: 1, y: 3 },    // current grid pos (float for smooth movement)
+    target: { x: 1, y: 3 },
+    path: [],
+    topColor: '#7c3aed', leftColor: '#5b21b6', rightColor: '#4c1d95',
+    bubble: '▶ read_file page.tsx',
+    bubbleColor: '#a78bfa',
+    bobOffset: 0, bobPhase: 0,
+    meetingPos: { x: 2, y: 4 },
+    inMeeting: false, alpha: 1,
+  },
+  {
+    id: 1, emoji: '✍️',
+    pos: { x: 5, y: 1 },
+    target: { x: 5, y: 1 },
+    path: [],
+    topColor: '#059669', leftColor: '#065f46', rightColor: '#064e3b',
+    bubble: '초안 작성 중...',
+    bubbleColor: '#4ade80',
+    bobOffset: 0, bobPhase: 1,
+    meetingPos: { x: 3, y: 4 },
+    inMeeting: false, alpha: 1,
+  },
+  {
+    id: 2, emoji: '🔍',
+    pos: { x: 4, y: 5 },
+    target: { x: 4, y: 5 },
+    path: [],
+    topColor: '#d97706', leftColor: '#78350f', rightColor: '#6b2d0b',
+    bubble: '검토 완료 ✓',
+    bubbleColor: '#fbbf24',
+    bobOffset: 0, bobPhase: 2,
+    meetingPos: null,   // doesn't join meeting
+    inMeeting: false, alpha: 1,
+  }
+];
+
+// ── Pathfinding (simple straight-line grid walk) ──
+function makePath(from, to) {
+  const path = [];
+  let cx = from.x, cy = from.y;
+  const steps = Math.max(Math.abs(to.x - cx), Math.abs(to.y - cy));
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    path.push({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+  }
+  return path;
+}
+
+// ── Walk each agent on a random patrol ──
+const PATROL_ZONES = [
+  [{ x:0,y:2 },{ x:2,y:1 },{ x:1,y:4 },{ x:3,y:2 }],
+  [{ x:4,y:0 },{ x:6,y:1 },{ x:5,y:3 },{ x:4,y:2 }],
+  [{ x:3,y:5 },{ x:5,y:4 },{ x:6,y:5 },{ x:4,y:6 }],
+];
+
+let meetingMode = false;
+
+function pickNextPatrol(agentIdx) {
+  if (meetingMode) return;
+  const a = AGENTS[agentIdx];
+  const zone = PATROL_ZONES[agentIdx];
+  const next = zone[Math.floor(Math.random() * zone.length)];
+  a.path = makePath(a.pos, next);
+  a.target = next;
+}
+
+// Start patrols with stagger
+setTimeout(() => pickNextPatrol(0), 400);
+setTimeout(() => pickNextPatrol(1), 900);
+setTimeout(() => pickNextPatrol(2), 300);
+
+// ── Meeting sequence ──
+const MEETING_LINES = [
+  '🔬 분석 완료. 컴포넌트 3개 문제.',
+  '✍️ 알겠어. 수정 초안 쓸게.',
+  '🔬 auth.ts 특히 주의해줘.',
+  '✍️ OK. 테스트도 같이 수정?',
+];
+const MEETING_COLORS = ['#a78bfa','#4ade80','#a78bfa','#4ade80'];
+let meetingLineIdx = 0;
+let meetingBubbleLines = [];
+let meetingBubbleColors = [];
+
+function triggerMeeting() {
+  if (meetingMode) return;
+  meetingMode = true;
+
+  // Send agents to meeting positions
+  AGENTS.forEach(a => {
+    if (a.meetingPos) {
+      a.path   = makePath(a.pos, a.meetingPos);
+      a.target = a.meetingPos;
+      a.bubble = '📋 회의실로 이동 중...';
+    }
+  });
+
+  document.getElementById('t0').textContent = '📋 회의 중...';
+  document.getElementById('t1').textContent = '📋 회의 중...';
+  pushStream('🔬 analyst', '회의 시작', '#a78bfa');
+
+  // Start dialogue after agents arrive (~2.5s)
+  setTimeout(() => showNextLine(), 2600);
+}
+
+function showNextLine() {
+  if (meetingLineIdx >= MEETING_LINES.length) return;
+  meetingBubbleLines.push(MEETING_LINES[meetingLineIdx]);
+  meetingBubbleColors.push(MEETING_COLORS[meetingLineIdx]);
+  pushStream(
+    meetingLineIdx % 2 === 0 ? '🔬 analyst' : '✍️ writer',
+    MEETING_LINES[meetingLineIdx],
+    MEETING_COLORS[meetingLineIdx]
+  );
+  meetingLineIdx++;
+  setTimeout(showNextLine, 1600);
+}
+
+// ── Stream ──
+function pushStream(who, msg, color) {
+  const scroll = document.getElementById('stream-scroll');
+  const el = document.createElement('div');
+  el.className = 'se';
+  el.innerHTML = `<span style="color:${color};font-weight:bold">${who}</span> <span style="color:#334155">›</span> <span style="color:#64748b">${msg}</span>`;
+  scroll.appendChild(el);
+  // Keep last 5
+  while (scroll.children.length > 5) scroll.removeChild(scroll.firstChild);
+}
+
+// ── Main loop ──
+const WALK_SPEED = 0.04;  // grid units per frame
+let lastT = 0;
+
+function frame(ts) {
+  const dt = Math.min((ts - lastT) / 16.67, 3); // normalized to 60fps
+  lastT = ts;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // ── Draw grid ──
+  for (let gx = 0; gx < 8; gx++) {
+    for (let gy = 0; gy < 8; gy++) {
+      const highlight = AGENTS.some(a => Math.round(a.pos.x) === gx && Math.round(a.pos.y) === gy);
+      drawTile(gx, gy, highlight ? '#111f35' : '#0b1728', '#1e3a5f55');
+    }
+  }
+
+  // ── Move agents ──
+  AGENTS.forEach((a, idx) => {
+    if (a.path.length > 0) {
+      const next = a.path[0];
+      const dx = next.x - a.pos.x;
+      const dy = next.y - a.pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const step = WALK_SPEED * dt;
+      if (dist <= step) {
+        a.pos = { ...next };
+        a.path.shift();
+        if (a.path.length === 0 && !meetingMode) {
+          // Arrived — wait then pick next patrol
+          setTimeout(() => pickNextPatrol(idx), 800 + Math.random() * 1200);
+        }
+      } else {
+        a.pos.x += (dx / dist) * step;
+        a.pos.y += (dy / dist) * step;
+      }
+    }
+
+    // Bob
+    a.bobOffset = Math.sin(ts / 500 + a.bobPhase * 2.1) * 3;
+  });
+
+  // ── Draw agents (back-to-front by gy) ──
+  const sorted = [...AGENTS].sort((a, b) => (a.pos.x + a.pos.y) - (b.pos.x + b.pos.y));
+  sorted.forEach(a => {
+    const walking = a.path.length > 0;
+    const bobH = walking ? Math.abs(Math.sin(ts / 180)) * 5 : a.bobOffset;
+    drawBox(a.pos.x, a.pos.y, 30 + bobH, a.topColor, a.leftColor, a.rightColor, a.alpha);
+    drawEmoji(a.pos.x, a.pos.y, 30 + bobH, a.emoji, 0);
+
+    // Bubble (only when not in meeting or is reviewer)
+    if (!meetingMode || a.id === 2) {
+      const sp = gridToScreen(a.pos.x, a.pos.y);
+      drawBubble(sp.x, sp.y - 30 - bobH - 12, a.bubble, a.bubbleColor, null);
+    }
+  });
+
+  // ── Meeting bubble ──
+  if (meetingMode && meetingBubbleLines.length > 0) {
+    // Position above meeting center
+    const mc = gridToScreen(2.5, 4);
+    const showTyping = meetingLineIdx < MEETING_LINES.length;
+    drawMeetingBubble(mc.x, mc.y - 60, meetingBubbleLines, meetingBubbleColors, showTyping);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+
+// ── Keys ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'f' || e.key === 'F') document.body.classList.toggle('full');
+  if (e.key === 'm' || e.key === 'M') triggerMeeting();
+  if (e.key === 'r' || e.key === 'R') location.reload();
+});
+</script>
+</body>
+</html>

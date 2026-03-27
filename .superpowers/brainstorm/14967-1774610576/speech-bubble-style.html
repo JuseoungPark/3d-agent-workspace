@@ -1,0 +1,102 @@
+<h2>말풍선과 에이전트 정보 — 어떻게 보여줄까요?</h2>
+<p class="subtitle">아이소메트릭 뷰에서 각 에이전트의 상태와 대화를 표시하는 방식</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="minimal-bubble" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a; height:180px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+      <svg width="220" height="160" viewBox="0 0 220 160">
+        <!-- Floor -->
+        <polygon points="60,90 110,65 160,90 110,115" fill="#1e293b" stroke="#334155" stroke-width="0.8"/>
+        <!-- Agent block -->
+        <polygon points="85,75 110,62 110,85 85,98" fill="#7c3aed" opacity="0.95"/>
+        <polygon points="110,62 135,75 135,98 110,85" fill="#5b21b6" opacity="0.95"/>
+        <polygon points="85,75 110,62 135,75 110,88" fill="#8b5cf6" opacity="0.95"/>
+        <!-- Agent emoji on top -->
+        <text x="110" y="80" text-anchor="middle" font-size="13">🔬</text>
+        <!-- Simple speech bubble - just text -->
+        <rect x="120" y="38" width="80" height="18" rx="9" fill="#1d4ed8"/>
+        <polygon points="128,56 122,64 134,56" fill="#1d4ed8"/>
+        <text x="160" y="51" text-anchor="middle" font-size="8" fill="white" font-family="monospace">파일 읽는 중...</text>
+        <!-- Status dot only -->
+        <circle cx="88" cy="73" r="4" fill="#22c55e"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>심플 말풍선</h3>
+      <p>단 한 줄. 지금 뭐하는지만. 깔끔하고 공간 안 잡음. 클릭하면 상세 패널 열림.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="rich-bubble" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a; height:180px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+      <svg width="220" height="160" viewBox="0 0 220 160">
+        <!-- Floor -->
+        <polygon points="60,100 110,75 160,100 110,125" fill="#1e293b" stroke="#334155" stroke-width="0.8"/>
+        <!-- Agent block -->
+        <polygon points="85,85 110,72 110,95 85,108" fill="#7c3aed" opacity="0.95"/>
+        <polygon points="110,72 135,85 135,108 110,95" fill="#5b21b6" opacity="0.95"/>
+        <polygon points="85,85 110,72 135,85 110,98" fill="#8b5cf6" opacity="0.95"/>
+        <text x="110" y="90" text-anchor="middle" font-size="13">🔬</text>
+        <!-- Rich bubble -->
+        <rect x="115" y="15" width="96" height="52" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <polygon points="122,67 118,75 130,67" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <!-- Agent name + status -->
+        <rect x="120" y="20" width="6" height="6" rx="1" fill="#7c3aed"/>
+        <text x="130" y="27" font-size="8" fill="#a78bfa" font-family="monospace" font-weight="bold">ANALYST</text>
+        <circle cx="205" cy="24" r="3" fill="#22c55e"/>
+        <!-- Divider -->
+        <line x1="120" y1="31" x2="206" y2="31" stroke="#334155" stroke-width="0.5"/>
+        <!-- Task -->
+        <text x="120" y="41" font-size="7" fill="#94a3b8" font-family="monospace">▶ read_file components/</text>
+        <!-- Mini progress -->
+        <rect x="120" y="47" width="80" height="4" rx="2" fill="#334155"/>
+        <rect x="120" y="47" width="52" height="4" rx="2" fill="#7c3aed"/>
+        <!-- Last message -->
+        <text x="120" y="61" font-size="6.5" fill="#64748b" font-family="monospace">"구조 파악 완료, 다음—"</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>정보 카드형 말풍선</h3>
+      <p>에이전트명, 현재 툴 실행, 진행률, 마지막 메시지. 항상 보임. 정보 밀도 높음.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="meeting-bubble" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a; height:180px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+      <svg width="220" height="160" viewBox="0 0 220 160">
+        <!-- Meeting room floor -->
+        <polygon points="50,105 110,75 170,105 110,135" fill="#1e293b" stroke="#334155" stroke-width="0.8"/>
+        <!-- 3 agents meeting -->
+        <!-- Agent 1 purple -->
+        <polygon points="68,93 88,83 88,100 68,110" fill="#7c3aed" opacity="0.9"/>
+        <polygon points="88,83 108,93 108,110 88,100" fill="#5b21b6" opacity="0.9"/>
+        <polygon points="68,93 88,83 108,93 88,103" fill="#8b5cf6" opacity="0.9"/>
+        <text x="88" y="99" text-anchor="middle" font-size="10">🔬</text>
+        <!-- Agent 2 green -->
+        <polygon points="110,93 125,85 125,100 110,108" fill="#059669" opacity="0.9"/>
+        <polygon points="125,85 140,93 140,108 125,100" fill="#065f46" opacity="0.9"/>
+        <polygon points="110,93 125,85 140,93 125,101" fill="#10b981" opacity="0.9"/>
+        <text x="125" y="99" text-anchor="middle" font-size="10">✍️</text>
+        <!-- Shared meeting bubble above all -->
+        <rect x="55" y="18" width="112" height="56" rx="6" fill="#1c1917" stroke="#44403c" stroke-width="1"/>
+        <polygon points="95,74 89,82 101,74" fill="#1c1917" stroke="#44403c" stroke-width="1"/>
+        <text x="111" y="30" text-anchor="middle" font-size="7.5" fill="#d97706" font-family="monospace" font-weight="bold">📋 MEETING ROOM</text>
+        <line x1="60" y1="34" x2="162" y2="34" stroke="#44403c" stroke-width="0.5"/>
+        <!-- Conversation lines -->
+        <text x="62" y="44" font-size="7" fill="#a78bfa" font-family="monospace">🔬 분석 완료했어</text>
+        <text x="62" y="54" font-size="7" fill="#6ee7b7" font-family="monospace">✍️ 그럼 초안 쓸게</text>
+        <text x="62" y="64" font-size="7" fill="#a78bfa" font-family="monospace">🔬 3번 파일 주의해</text>
+        <!-- Typing indicator -->
+        <circle cx="65" cy="71" r="2" fill="#6ee7b7" opacity="0.8"/>
+        <circle cx="71" cy="71" r="2" fill="#6ee7b7" opacity="0.5"/>
+        <circle cx="77" cy="71" r="2" fill="#6ee7b7" opacity="0.3"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>회의실 공유 버블</h3>
+      <p>에이전트들이 모이면 하나의 큰 말풍선에 대화 내용이 실시간 스트리밍. 누가 말하는지 색상으로 구분. 가장 원하셨던 그 장면.</p>
+    </div>
+  </div>
+
+</div>

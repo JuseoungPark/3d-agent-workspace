@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Agent Workspace — Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020617; color: #e2e8f0; font-family: 'SF Mono', 'Fira Code', monospace; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── Top bar ── */
+  #titlebar {
+    height: 28px; background: #0a0f1a; border-bottom: 1px solid #1e293b;
+    display: flex; align-items: center; padding: 0 12px; gap: 6px; flex-shrink: 0;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ef4444; } .dot.y { background: #f59e0b; } .dot.g { background: #22c55e; }
+  #titlebar span { font-size: 10px; color: #475569; margin-left: 8px; }
+  #titlebar .badge { margin-left: auto; font-size: 9px; color: #334155; border: 1px solid #1e293b; padding: 2px 8px; border-radius: 10px; }
+  #fullscreen-hint { font-size: 9px; color: #334155; margin-left: 8px; }
+
+  /* ── Main 3D viewport ── */
+  #viewport {
+    flex: 1; position: relative; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 30%, #0d1b2e 0%, #020617 70%);
+  }
+
+  /* ── Isometric scene ── */
+  #scene {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -48%);
+  }
+
+  /* ── Floor tiles ── */
+  .iso-tile { position: absolute; width: 80px; height: 40px; }
+  .iso-tile::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #0f1f35; clip-path: polygon(50% 0%, 100% 25%, 50% 50%, 0% 25%);
+  }
+  .iso-tile::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    clip-path: polygon(50% 0%, 100% 25%, 50% 50%, 0% 25%);
+    border: 0.5px solid #1e3a5f44;
+  }
+
+  /* ── Agent blocks ── */
+  .agent-block {
+    position: absolute;
+    cursor: pointer;
+    transition: filter 0.2s;
+  }
+  .agent-block:hover { filter: brightness(1.3); }
+  .agent-block svg { display: block; }
+
+  /* ── Speech bubble ── */
+  .bubble {
+    position: absolute;
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 10px;
+    color: #94a3b8;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .bubble::after {
+    content: ''; position: absolute; bottom: -6px; left: 16px;
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #1e3a5f;
+  }
+  .bubble .agent-tag { font-weight: bold; margin-right: 4px; }
+  .bubble .action { color: #64748b; }
+  .bubble .msg { color: #cbd5e1; }
+
+  /* Meeting bubble */
+  .meeting-bubble {
+    position: absolute;
+    background: #0c1220;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 10px;
+    min-width: 220px;
+    pointer-events: none;
+    box-shadow: 0 0 30px rgba(124,58,237,0.15);
+  }
+  .meeting-bubble .mtitle {
+    font-size: 9px; color: #d97706; letter-spacing: 1px;
+    border-bottom: 1px solid #1e293b; padding-bottom: 4px; margin-bottom: 6px;
+  }
+  .meeting-bubble .mline { display: flex; gap: 6px; margin-bottom: 3px; align-items: flex-start; }
+  .meeting-bubble .mline .who { min-width: 14px; }
+  .meeting-bubble .mline .text { color: #94a3b8; }
+  .typing { display: flex; gap: 3px; margin-top: 4px; padding-left: 20px; }
+  .typing span { width: 5px; height: 5px; border-radius: 50%; background: #475569; animation: blink 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
+
+  /* ── HUD overlay ── */
+  #hud-agents {
+    position: absolute; top: 14px; right: 16px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .hud-agent {
+    background: rgba(10,15,26,0.85); border: 1px solid #1e293b;
+    border-radius: 6px; padding: 5px 10px; min-width: 140px;
+    backdrop-filter: blur(4px);
+  }
+  .hud-agent .name { font-size: 9px; letter-spacing: 1px; margin-bottom: 3px; }
+  .hud-agent .task { font-size: 8px; color: #475569; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+  .hud-bar { height: 2px; background: #1e293b; border-radius: 1px; }
+  .hud-fill { height: 100%; border-radius: 1px; transition: width 1.5s ease; }
+  .hud-status { width: 6px; height: 6px; border-radius: 50%; float: right; margin-top: -12px; }
+
+  #kbd-hint {
+    position: absolute; bottom: 12px; left: 16px;
+    font-size: 9px; color: #1e293b;
+  }
+  #kbd-hint kbd {
+    background: #0f172a; border: 1px solid #1e293b; border-radius: 3px;
+    padding: 1px 5px; font-family: inherit; color: #334155;
+  }
+
+  /* ── Bottom stream ── */
+  #stream {
+    height: 36px; background: #080d14; border-top: 1px solid #0f172a;
+    display: flex; align-items: center; padding: 0 16px; gap: 16px;
+    overflow: hidden; flex-shrink: 0; position: relative;
+  }
+  #stream::before {
+    content: 'LIVE'; position: absolute; left: 8px;
+    font-size: 7px; color: #ef4444; letter-spacing: 2px;
+    border: 1px solid #ef444433; border-radius: 2px; padding: 1px 4px;
+  }
+  #stream-inner { margin-left: 40px; display: flex; gap: 20px; align-items: center; }
+  .stream-item { font-size: 10px; white-space: nowrap; display: flex; gap: 5px; align-items: center; }
+  .stream-item .who { font-weight: bold; }
+  .stream-item .sep { color: #1e293b; }
+  .stream-item .what { color: #475569; }
+  .stream-item .val { }
+
+  /* ── Fullscreen toggle ── */
+  body.fullscreen #stream { display: none; }
+  body.fullscreen #hud-agents { display: none; }
+
+  /* ── Grid lines glow ── */
+  .glow-purple { color: #a78bfa; }
+  .glow-teal   { color: #2dd4bf; }
+  .glow-green  { color: #4ade80; }
+  .glow-amber  { color: #fbbf24; }
+  .glow-red    { color: #f87171; }
+
+  /* ── Pulse animation ── */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .pulsing { animation: pulse 2s infinite; }
+
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .floating { animation: float 3s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+  <span>agent-workspace — demo</span>
+  <div class="badge">3 agents active</div>
+  <span id="fullscreen-hint">Press <kbd style="background:#0f172a;border:1px solid #1e293b;border-radius:3px;padding:1px 5px;font-size:9px;color:#475569;">F</kbd> to toggle fullscreen</span>
+</div>
+
+<div id="viewport">
+
+  <!-- ISO SCENE -->
+  <div id="scene">
+    <svg width="620" height="480" viewBox="0 0 620 480">
+      <defs>
+        <filter id="glow-purple">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-teal">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- ── Floor grid ── -->
+      <g opacity="0.6">
+        <!-- Row 0 -->
+        <polygon points="200,160 260,128 320,160 260,192" fill="#0b1728" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="260,128 320,96 380,128 320,160" fill="#0b1728" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="320,96 380,64 440,96 380,128" fill="#0b1728" stroke="#1e3a5f" stroke-width="0.6"/>
+        <!-- Row 1 -->
+        <polygon points="140,192 200,160 260,192 200,224" fill="#0a1525" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="200,160 260,128 320,160 260,192" fill="#0a1525" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="260,128 320,96 380,128 320,160" fill="#0a1525" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="320,96 380,64 440,96 380,128" fill="#0a1525" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="380,64 440,32 500,64 440,96" fill="#0a1525" stroke="#1e3a5f" stroke-width="0.6"/>
+        <!-- Row 2 -->
+        <polygon points="80,224 140,192 200,224 140,256" fill="#091422" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="140,192 200,160 260,192 200,224" fill="#091422" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="200,160 260,128 320,160 260,192" fill="#091422" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="260,128 320,96 380,128 320,160" fill="#091422" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="320,96 380,64 440,96 380,128" fill="#091422" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="380,64 440,32 500,64 440,96" fill="#091422" stroke="#1e3a5f" stroke-width="0.6"/>
+        <!-- Row 3 -->
+        <polygon points="80,256 140,224 200,256 140,288" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="140,224 200,192 260,224 200,256" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="200,192 260,160 320,192 260,224" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="260,160 320,128 380,160 320,192" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="320,128 380,96 440,128 380,160" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="380,96 440,64 500,96 440,128" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <!-- Row 4 -->
+        <polygon points="80,288 140,256 200,288 140,320" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="140,256 200,224 260,256 200,288" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="200,224 260,192 320,224 260,256" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="260,192 320,160 380,192 320,224" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+        <polygon points="320,160 380,128 440,160 380,192" fill="#081220" stroke="#1e3a5f" stroke-width="0.6"/>
+      </g>
+
+      <!-- ── AGENT 1: ANALYST (purple) — solo working ── -->
+      <g id="agent-analyst" class="floating" style="animation-delay:0s">
+        <!-- Block left face -->
+        <polygon points="200,192 230,176 230,218 200,234" fill="#5b21b6" opacity="0.95"/>
+        <!-- Block right face -->
+        <polygon points="230,176 260,192 260,234 230,218" fill="#4c1d95" opacity="0.95"/>
+        <!-- Block top face -->
+        <polygon points="200,192 230,176 260,192 230,208" fill="#7c3aed" opacity="0.95" filter="url(#glow-purple)"/>
+        <!-- Emoji -->
+        <text x="230" y="205" text-anchor="middle" font-size="18" style="user-select:none">🔬</text>
+        <!-- Simple bubble: solo working -->
+        <rect x="242" y="148" width="106" height="20" rx="10" fill="#1d1040" stroke="#7c3aed" stroke-width="0.8"/>
+        <polygon points="252,168 248,176 258,168" fill="#1d1040"/>
+        <text x="295" y="162" text-anchor="middle" font-size="8.5" fill="#a78bfa" font-family="monospace">▶ read_file app/page.tsx</text>
+        <!-- Progress bar below bubble -->
+        <rect x="252" y="172" width="76" height="3" rx="1.5" fill="#1e293b"/>
+        <rect x="252" y="172" width="52" height="3" rx="1.5" fill="#7c3aed" id="bar-analyst"/>
+      </g>
+
+      <!-- ── AGENT 2: WRITER (green) — solo working ── -->
+      <g id="agent-writer" class="floating" style="animation-delay:1s">
+        <polygon points="320,192 350,176 350,218 320,234" fill="#065f46" opacity="0.95"/>
+        <polygon points="350,176 380,192 380,234 350,218" fill="#064e3b" opacity="0.95"/>
+        <polygon points="320,192 350,176 380,192 350,208" fill="#059669" opacity="0.95" filter="url(#glow-teal)"/>
+        <text x="350" y="205" text-anchor="middle" font-size="18" style="user-select:none">✍️</text>
+        <!-- Simple bubble -->
+        <rect x="362" y="148" width="100" height="20" rx="10" fill="#021d14" stroke="#059669" stroke-width="0.8"/>
+        <polygon points="372,168 368,176 378,168" fill="#021d14"/>
+        <text x="412" y="162" text-anchor="middle" font-size="8.5" fill="#4ade80" font-family="monospace">초안 작성 중...</text>
+      </g>
+
+      <!-- ── AGENT 3: REVIEWER (amber) — moving to meeting ── -->
+      <g id="agent-reviewer" class="floating" style="animation-delay:0.5s">
+        <polygon points="260,256 290,240 290,282 260,298" fill="#78350f" opacity="0.95"/>
+        <polygon points="290,240 320,256 320,298 290,282" fill="#6b2d0b" opacity="0.95"/>
+        <polygon points="260,256 290,240 320,256 290,272" fill="#d97706" opacity="0.95"/>
+        <text x="290" y="269" text-anchor="middle" font-size="18" style="user-select:none">🔍</text>
+        <!-- Simple bubble -->
+        <rect x="302" y="213" width="100" height="20" rx="10" fill="#1c1006" stroke="#d97706" stroke-width="0.8"/>
+        <polygon points="312,233 308,241 318,233" fill="#1c1006"/>
+        <text x="352" y="227" text-anchor="middle" font-size="8.5" fill="#fbbf24" font-family="monospace">검토 완료 ✓</text>
+      </g>
+
+      <!-- ── MEETING bubble (analyst + writer) ── -->
+      <g id="meeting-group" opacity="0" style="transition: opacity 0.6s">
+        <!-- Meeting glow on floor -->
+        <ellipse cx="280" cy="340" rx="80" ry="20" fill="#7c3aed" opacity="0.08"/>
+
+        <!-- Agent 1 moved to meeting -->
+        <polygon points="220,316 245,303 245,338 220,351" fill="#5b21b6" opacity="0.9"/>
+        <polygon points="245,303 270,316 270,351 245,338" fill="#4c1d95" opacity="0.9"/>
+        <polygon points="220,316 245,303 270,316 245,329" fill="#7c3aed" opacity="0.9"/>
+        <text x="245" y="326" text-anchor="middle" font-size="15">🔬</text>
+
+        <!-- Agent 2 moved to meeting -->
+        <polygon points="290,316 315,303 315,338 290,351" fill="#065f46" opacity="0.9"/>
+        <polygon points="315,303 340,316 340,351 315,338" fill="#064e3b" opacity="0.9"/>
+        <polygon points="290,316 315,303 340,316 315,329" fill="#059669" opacity="0.9"/>
+        <text x="315" y="326" text-anchor="middle" font-size="15">✍️</text>
+
+        <!-- Meeting bubble (shared) -->
+        <rect x="160" y="230" width="220" height="62" rx="8" fill="#0c1220" stroke="#334155" stroke-width="1"/>
+        <polygon points="240,292 234,302 246,292" fill="#0c1220" stroke="#334155" stroke-width="1"/>
+
+        <text x="175" y="245" font-size="8" fill="#d97706" letter-spacing="1" font-family="monospace">📋 MEETING</text>
+        <line x1="168" y1="249" x2="372" y2="249" stroke="#1e293b" stroke-width="0.6"/>
+
+        <text x="172" y="260" font-size="9" fill="#a78bfa" font-family="monospace" id="mline1">🔬 분석 완료. 컴포넌트 3개 문제 있어.</text>
+        <text x="172" y="273" font-size="9" fill="#4ade80" font-family="monospace" id="mline2">✍️ 알겠어. 수정 초안 바로 쓸게.</text>
+        <text x="172" y="286" font-size="9" fill="#a78bfa" font-family="monospace" id="mline3" opacity="0">🔬 auth.ts 특히 주의해줘.</text>
+
+        <!-- Typing dots -->
+        <g id="typing-dots">
+          <circle cx="185" cy="284" r="2.5" fill="#4ade80" opacity="0.8"/>
+          <circle cx="192" cy="284" r="2.5" fill="#4ade80" opacity="0.5"/>
+          <circle cx="199" cy="284" r="2.5" fill="#4ade80" opacity="0.3"/>
+        </g>
+      </g>
+
+    </svg>
+  </div>
+
+  <!-- HUD top-right -->
+  <div id="hud-agents">
+    <div class="hud-agent">
+      <div class="name glow-purple">🔬 ANALYST</div>
+      <div class="task" id="hud-analyst-task">read_file app/page.tsx</div>
+      <div class="hud-bar"><div class="hud-fill" id="hud-bar-analyst" style="width:67%;background:#7c3aed;"></div></div>
+      <div class="hud-status pulsing" style="background:#22c55e;margin-top:4px;"></div>
+    </div>
+    <div class="hud-agent">
+      <div class="name glow-green">✍️ WRITER</div>
+      <div class="task" id="hud-writer-task">초안 작성 중...</div>
+      <div class="hud-bar"><div class="hud-fill" id="hud-bar-writer" style="width:35%;background:#059669;"></div></div>
+      <div class="hud-status pulsing" style="background:#22c55e;margin-top:4px;animation-delay:0.3s"></div>
+    </div>
+    <div class="hud-agent">
+      <div class="name glow-amber">🔍 REVIEWER</div>
+      <div class="task" id="hud-reviewer-task">검토 완료 ✓</div>
+      <div class="hud-bar"><div class="hud-fill" id="hud-bar-reviewer" style="width:100%;background:#d97706;"></div></div>
+      <div class="hud-status" style="background:#f59e0b;margin-top:4px;"></div>
+    </div>
+  </div>
+
+  <div id="kbd-hint"><kbd>F</kbd> fullscreen &nbsp; <kbd>M</kbd> trigger meeting</div>
+</div>
+
+<!-- Bottom stream -->
+<div id="stream">
+  <div id="stream-inner">
+    <div class="stream-item">
+      <span class="who glow-purple">🔬 analyst</span>
+      <span class="sep">›</span>
+      <span class="what">read_file</span>
+      <span class="val" style="color:#64748b">app/page.tsx</span>
+    </div>
+    <div class="stream-item">
+      <span class="who glow-green">✍️ writer</span>
+      <span class="sep">›</span>
+      <span class="val" style="color:#4ade80">"컴포넌트 구조 파악 완료, 초안 시작"</span>
+    </div>
+    <div class="stream-item">
+      <span class="who glow-amber">🔍 reviewer</span>
+      <span class="sep">›</span>
+      <span class="what">bash</span>
+      <span class="val" style="color:#64748b">npm run lint → 0 errors</span>
+    </div>
+    <div class="stream-item" id="stream-live" style="opacity:0.4">
+      <span class="pulsing" style="color:#ef4444;font-size:8px">●</span>
+      <span style="color:#334155">대기 중...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Keyboard shortcuts ──
+  document.addEventListener('keydown', e => {
+    if (e.key === 'f' || e.key === 'F') {
+      document.body.classList.toggle('fullscreen');
+    }
+    if (e.key === 'm' || e.key === 'M') {
+      triggerMeeting();
+    }
+  });
+
+  // ── Meeting trigger ──
+  let meetingActive = false;
+  function triggerMeeting() {
+    if (meetingActive) return;
+    meetingActive = true;
+
+    const solo1 = document.getElementById('agent-analyst');
+    const solo2 = document.getElementById('agent-writer');
+    const mtg   = document.getElementById('meeting-group');
+    const hint  = document.getElementById('kbd-hint');
+
+    // Fade out solo agents
+    solo1.style.transition = 'opacity 0.5s'; solo1.style.opacity = '0';
+    solo2.style.transition = 'opacity 0.5s'; solo2.style.opacity = '0';
+
+    setTimeout(() => {
+      mtg.style.opacity = '1';
+      updateStream('🔬 analyst', '회의 시작 — "분석 완료. 컴포넌트 3개 문제 있어."');
+    }, 500);
+
+    setTimeout(() => {
+      document.getElementById('mline2').setAttribute('opacity','1');
+      updateStream('✍️ writer', '"알겠어. 수정 초안 바로 쓸게."');
+    }, 2200);
+
+    setTimeout(() => {
+      document.getElementById('typing-dots').style.opacity = '0';
+      document.getElementById('mline3').setAttribute('opacity','1');
+      updateStream('🔬 analyst', '"auth.ts 특히 주의해줘."');
+    }, 3800);
+
+    // Update HUD
+    setTimeout(() => {
+      document.getElementById('hud-analyst-task').textContent = '📋 회의 중...';
+      document.getElementById('hud-writer-task').textContent  = '📋 회의 중...';
+    }, 600);
+
+    hint.innerHTML = '<kbd>R</kbd> reset &nbsp; <kbd>F</kbd> fullscreen';
+  }
+
+  document.addEventListener('keydown', e => {
+    if ((e.key === 'r' || e.key === 'R') && meetingActive) {
+      location.reload();
+    }
+  });
+
+  // ── Stream update ──
+  const streamLive = document.getElementById('stream-live');
+  function updateStream(who, msg) {
+    streamLive.style.opacity = '1';
+    streamLive.innerHTML = `
+      <span style="font-weight:bold;color:#e2e8f0">${who}</span>
+      <span style="color:#1e293b">›</span>
+      <span style="color:#94a3b8">${msg}</span>
+    `;
+  }
+
+  // ── HUD progress animation ──
+  setTimeout(() => {
+    document.getElementById('hud-bar-analyst').style.width = '82%';
+    document.getElementById('hud-bar-writer').style.width  = '58%';
+  }, 800);
+
+  setTimeout(() => {
+    document.getElementById('hud-bar-analyst').style.width = '91%';
+    document.getElementById('hud-bar-writer').style.width  = '74%';
+  }, 3000);
+
+  // ── Auto stream ticker ──
+  const events = [
+    { delay: 1500, who: '🔬 analyst', action: 'grep', val: 'useState hooks' },
+    { delay: 3000, who: '✍️ writer',  action: 'edit_file', val: 'components/Card.tsx' },
+    { delay: 5000, who: '🔍 reviewer',action: 'read_file', val: 'CHANGELOG.md' },
+  ];
+  events.forEach(ev => {
+    setTimeout(() => {
+      if (!meetingActive) updateStream(ev.who, `${ev.action} → ${ev.val}`);
+    }, ev.delay);
+  });
+</script>
+</body>
+</html>

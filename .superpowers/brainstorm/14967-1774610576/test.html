@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Three.js Test</title>
+<style>body{margin:0;background:#000;}canvas{display:block;}</style>
+</head>
+<body>
+<script type="module">
+import * as THREE from './three.module.js';
+console.log('THREE loaded:', typeof THREE, THREE.REVISION);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.z = 3;
+scene.add(new THREE.AmbientLight(0xffffff, 2));
+const cube = new THREE.Mesh(
+  new THREE.BoxGeometry(1,1,1),
+  new THREE.MeshLambertMaterial({color: 0x7c3aed})
+);
+scene.add(cube);
+function animate(){ requestAnimationFrame(animate); cube.rotation.x+=0.01; cube.rotation.y+=0.01; renderer.render(scene,camera); }
+animate();
+console.log('Scene started!');
+</script>
+</body>
+</html>

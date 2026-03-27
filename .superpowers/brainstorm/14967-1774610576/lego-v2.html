@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Lego Precise Head</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#020617; overflow:hidden; font-family:'SF Mono',monospace; display:flex; height:100vh; }
+#left { flex:1; position:relative; }
+#c { display:block; width:100%; height:100%; }
+#panel {
+  width:240px; background:#080d14; border-left:1px solid #0f172a;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+#panel-header { padding:14px 16px 10px; border-bottom:1px solid #0f172a; font-size:9px; letter-spacing:2px; color:#334155; }
+#panel-header .aname { font-size:13px; color:#e2e8f0; letter-spacing:0; margin-top:4px; }
+#panel-body { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:14px; }
+#panel-body::-webkit-scrollbar { width:4px; }
+#panel-body::-webkit-scrollbar-thumb { background:#1e293b; border-radius:2px; }
+.stitle { font-size:8px; color:#334155; letter-spacing:2px; margin-bottom:6px; }
+.face-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+.fopt {
+  aspect-ratio:1; border-radius:7px; border:1.5px solid #1e293b;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:22px; background:#0a0f1a; transition:border-color .15s, transform .1s;
+}
+.fopt:hover { border-color:#334155; transform:scale(1.08); }
+.fopt.sel { border-color:#7c3aed; box-shadow:0 0 8px #7c3aed44; }
+.hair-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+.hopt {
+  aspect-ratio:1; border-radius:7px; border:1.5px solid #1e293b;
+  cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  background:#0a0f1a; transition:border-color .15s, transform .1s; padding:4px;
+}
+.hopt:hover { border-color:#334155; transform:scale(1.08); }
+.hopt.sel { border-color:#059669; box-shadow:0 0 8px #05966944; }
+.hico { font-size:16px; }
+.hlbl { font-size:7px; color:#475569; }
+.crow { display:flex; gap:5px; flex-wrap:wrap; }
+.csw {
+  width:26px; height:26px; border-radius:6px; cursor:pointer;
+  border:2px solid transparent; transition:transform .1s, border-color .15s;
+}
+.csw:hover { transform:scale(1.15); }
+.csw.sel { border-color:white; }
+.atabs { display:flex; gap:4px; }
+.atab {
+  flex:1; padding:5px 4px; border-radius:6px; border:1px solid #1e293b;
+  cursor:pointer; text-align:center; font-size:10px; transition:background .15s, border-color .15s;
+}
+.atab:hover { background:#0f172a; }
+.atab.sel { border-color:#7c3aed; background:#1a0d2e; }
+#kbd { position:absolute; bottom:10px; left:14px; font-size:9px; color:#1e3a5f; }
+kbd { background:#0a0f1a; border:1px solid #1e293b; border-radius:3px; padding:1px 5px; color:#334155; font-family:inherit; }
+</style>
+</head>
+<body>
+<div id="left"><canvas id="c"></canvas><div id="kbd"><kbd>M</kbd> meeting &nbsp;<kbd>R</kbd> reset &nbsp;<kbd>scroll</kbd> zoom</div></div>
+<div id="panel">
+  <div id="panel-header">AVATAR EDITOR<div class="aname" id="aname">🔬 analyst</div></div>
+  <div id="panel-body">
+    <div>
+      <div class="stitle">AGENT</div>
+      <div class="atabs">
+        <div class="atab sel" onclick="selAgent(0)">🔬<br><span style="font-size:7px;color:#475569">analyst</span></div>
+        <div class="atab" onclick="selAgent(1)">✍️<br><span style="font-size:7px;color:#475569">writer</span></div>
+        <div class="atab" onclick="selAgent(2)">🔍<br><span style="font-size:7px;color:#475569">reviewer</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="stitle">FACE</div>
+      <div class="face-grid" id="fgrid">
+        <div class="fopt sel" onclick="applyFace(this,'😐')">😐</div>
+        <div class="fopt" onclick="applyFace(this,'🙂')">🙂</div>
+        <div class="fopt" onclick="applyFace(this,'😤')">😤</div>
+        <div class="fopt" onclick="applyFace(this,'🤔')">🤔</div>
+        <div class="fopt" onclick="applyFace(this,'😴')">😴</div>
+        <div class="fopt" onclick="applyFace(this,'🥸')">🥸</div>
+        <div class="fopt" onclick="applyFace(this,'😈')">😈</div>
+        <div class="fopt" onclick="applyFace(this,'🤖')">🤖</div>
+        <div class="fopt" onclick="applyFace(this,'😎')">😎</div>
+        <div class="fopt" onclick="applyFace(this,'🧐')">🧐</div>
+        <div class="fopt" onclick="applyFace(this,'😡')">😡</div>
+        <div class="fopt" onclick="applyFace(this,'🥳')">🥳</div>
+      </div>
+    </div>
+    <div>
+      <div class="stitle">HAIR STYLE</div>
+      <div class="hair-grid">
+        <div class="hopt sel" onclick="applyHair(this,'SHORT')"><div class="hico">▬</div><div class="hlbl">SHORT</div></div>
+        <div class="hopt" onclick="applyHair(this,'LONG')"><div class="hico">⬇</div><div class="hlbl">LONG</div></div>
+        <div class="hopt" onclick="applyHair(this,'SPIKY')"><div class="hico">⚡</div><div class="hlbl">SPIKY</div></div>
+        <div class="hopt" onclick="applyHair(this,'BUN')"><div class="hico">⭕</div><div class="hlbl">BUN</div></div>
+        <div class="hopt" onclick="applyHair(this,'CURLY')"><div class="hico">🌀</div><div class="hlbl">CURLY</div></div>
+        <div class="hopt" onclick="applyHair(this,'HELMET')"><div class="hico">⛑</div><div class="hlbl">HELMET</div></div>
+        <div class="hopt" onclick="applyHair(this,'PONYTAIL')"><div class="hico">🎀</div><div class="hlbl">PONYTAIL</div></div>
+        <div class="hopt" onclick="applyHair(this,'BALD')"><div class="hico">○</div><div class="hlbl">BALD</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="stitle">HAIR COLOR</div>
+      <div class="crow">
+        <div class="csw sel" style="background:#1a1a1a" onclick="applyHairColor(this,'#1a1a1a')"></div>
+        <div class="csw" style="background:#4a2800" onclick="applyHairColor(this,'#4a2800')"></div>
+        <div class="csw" style="background:#b07030" onclick="applyHairColor(this,'#b07030')"></div>
+        <div class="csw" style="background:#f0c040" onclick="applyHairColor(this,'#f0c040')"></div>
+        <div class="csw" style="background:#d0d0d0" onclick="applyHairColor(this,'#d0d0d0')"></div>
+        <div class="csw" style="background:#ff6060" onclick="applyHairColor(this,'#ff6060')"></div>
+        <div class="csw" style="background:#5080ff" onclick="applyHairColor(this,'#5080ff')"></div>
+        <div class="csw" style="background:#7c3aed" onclick="applyHairColor(this,'#7c3aed')"></div>
+      </div>
+    </div>
+    <div>
+      <div class="stitle">OUTFIT COLOR</div>
+      <div class="crow">
+        <div class="csw sel" style="background:#7c3aed" onclick="applyBodyColor(this,'#7c3aed')"></div>
+        <div class="csw" style="background:#059669" onclick="applyBodyColor(this,'#059669')"></div>
+        <div class="csw" style="background:#d97706" onclick="applyBodyColor(this,'#d97706')"></div>
+        <div class="csw" style="background:#2563eb" onclick="applyBodyColor(this,'#2563eb')"></div>
+        <div class="csw" style="background:#dc2626" onclick="applyBodyColor(this,'#dc2626')"></div>
+        <div class="csw" style="background:#0891b2" onclick="applyBodyColor(this,'#0891b2')"></div>
+        <div class="csw" style="background:#be185d" onclick="applyBodyColor(this,'#be185d')"></div>
+        <div class="csw" style="background:#334155" onclick="applyBodyColor(this,'#334155')"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+function resize() {
+  const w = document.getElementById('left').clientWidth, h = window.innerHeight;
+  renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x020617);
+scene.fog = new THREE.FogExp2(0x020617, 0.028);
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+camera.position.set(10, 13, 10); camera.lookAt(0, 0.5, 0);
+
+const ambient = new THREE.AmbientLight(0x1a2a4a, 2.5); scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xffffff, 3.5);
+sun.position.set(8,18,8); sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.near=0.1; sun.shadow.camera.far=60;
+sun.shadow.camera.left=sun.shadow.camera.bottom=-16;
+sun.shadow.camera.right=sun.shadow.camera.top=16;
+sun.shadow.bias=-0.001; scene.add(sun);
+const fill = new THREE.DirectionalLight(0x3355bb, 1.0); fill.position.set(-4,5,-6); scene.add(fill);
+const rim  = new THREE.DirectionalLight(0x112244, 0.8);  rim.position.set(0,2,-8);  scene.add(rim);
+
+resize(); window.addEventListener('resize', resize);
+
+// ── Floor ──
+const tileGeo = new THREE.BoxGeometry(0.97,0.1,0.97);
+for (let x=-7;x<=7;x++) for (let z=-7;z<=7;z++) {
+  const m = new THREE.MeshLambertMaterial({ color:(x+z)%2===0?0x0b1728:0x0d1e35 });
+  const t = new THREE.Mesh(tileGeo, m); t.position.set(x,-0.05,z); t.receiveShadow=true; scene.add(t);
+}
+const grid = new THREE.GridHelper(15,15,0x1e3a5f,0x1e3a5f);
+grid.position.y=0.01; grid.material.opacity=0.3; grid.material.transparent=true; scene.add(grid);
+
+// ── Precise LEGO head (cylinder + dome + neck) ──
+function makePreciseHead(faceEmoji, skinColor=0xffd700) {
+  const group = new THREE.Group();
+  const skinMat = new THREE.MeshLambertMaterial({ color: skinColor });
+
+  // 1. Main cylinder — tapers very slightly like real lego head
+  //    Real lego head: ~10.2mm wide, ~11.2mm tall, slightly oval
+  const headCyl = new THREE.CylinderGeometry(0.235, 0.245, 0.44, 32, 1, true);
+  // Custom face texture wrapping on cylinder
+  const faceTex = makeCylinderFaceTex(faceEmoji, skinColor);
+  const cylMat = new THREE.MeshLambertMaterial({ map: faceTex, side: THREE.FrontSide });
+  const headMesh = new THREE.Mesh(headCyl, cylMat);
+  group.add(headMesh);
+
+  // 2. Top cap (flat)
+  const topCap = new THREE.Mesh(
+    new THREE.CircleGeometry(0.235, 32),
+    skinMat.clone()
+  );
+  topCap.rotation.x = -Math.PI/2; topCap.position.y = 0.22;
+  group.add(topCap);
+
+  // 3. Bottom cap
+  const botCap = new THREE.Mesh(
+    new THREE.CircleGeometry(0.245, 32),
+    skinMat.clone()
+  );
+  botCap.rotation.x = Math.PI/2; botCap.position.y = -0.22;
+  group.add(botCap);
+
+  // 4. Top dome (rounded top like real LEGO)
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(0.235, 32, 16, 0, Math.PI*2, 0, Math.PI/2.2),
+    skinMat.clone()
+  );
+  dome.position.y = 0.19; dome.rotation.x = 0;
+  group.add(dome);
+
+  // 5. Neck peg (cylinder underneath)
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.1, 0.14, 16),
+    skinMat.clone()
+  );
+  neck.position.y = -0.29;
+  group.add(neck);
+
+  // 6. Head stud on top
+  const stud = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.095, 0.095, 0.09, 16),
+    new THREE.MeshLambertMaterial({ color: new THREE.Color(skinColor).lerp(new THREE.Color(0xffffff),0.12) })
+  );
+  stud.position.y = 0.33;
+  group.add(stud);
+
+  // 7. Stud top rim
+  const studRim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.095, 0.012, 8, 16),
+    new THREE.MeshLambertMaterial({ color: new THREE.Color(skinColor).lerp(new THREE.Color(0x000000),0.1) })
+  );
+  studRim.position.y = 0.375; studRim.rotation.x = Math.PI/2;
+  group.add(studRim);
+
+  group.traverse(c => { if (c.isMesh) c.castShadow = true; });
+  return group;
+}
+
+// Cylinder face texture: full wrap with face centered on front
+function makeCylinderFaceTex(emoji, skinColor) {
+  const W = 512, H = 256;
+  const cv = document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx = cv.getContext('2d');
+
+  // Background = skin color
+  const r = (skinColor >> 16 & 0xff), g = (skinColor >> 8 & 0xff), b = (skinColor & 0xff);
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  ctx.fillRect(0,0,W,H);
+
+  // Subtle neck line at bottom
+  ctx.fillStyle = `rgba(0,0,0,0.08)`;
+  ctx.fillRect(0, H*0.88, W, H*0.12);
+
+  // Face zone: front 40% of cylinder (center of texture)
+  const faceX = W*0.3, faceW = W*0.4;
+
+  // Eyes (two) — LEGO-style eyes: simple outlines
+  const eyeY = H * 0.35;
+  const eyeR = H * 0.12;
+  [-0.13, 0.13].forEach(offset => {
+    const ex = W/2 + offset * W * 0.7;
+    // White of eye
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY, eyeR*1.1, eyeR, 0, 0, Math.PI*2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    // Pupil
+    ctx.beginPath();
+    ctx.ellipse(ex+2, eyeY+1, eyeR*0.55, eyeR*0.62, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fill();
+    // Highlight
+    ctx.beginPath();
+    ctx.arc(ex-eyeR*0.3, eyeY-eyeR*0.3, eyeR*0.2, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fill();
+  });
+
+  // Eyebrows
+  [-0.13, 0.13].forEach(offset => {
+    const ex = W/2 + offset * W * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(ex - eyeR*1.1, eyeY - eyeR*1.5);
+    ctx.quadraticCurveTo(ex, eyeY - eyeR*2.0, ex + eyeR*1.1, eyeY - eyeR*1.5);
+    ctx.strokeStyle = '#3a2200';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  });
+
+  // Nose (small dot / two dots like LEGO)
+  ctx.beginPath();
+  ctx.arc(W/2 - 5, H*0.52, 3.5, 0, Math.PI*2);
+  ctx.arc(W/2 + 5, H*0.52, 3.5, 0, Math.PI*2);
+  ctx.fillStyle = `rgba(0,0,0,0.18)`;
+  ctx.fill();
+
+  // Mouth — apply emoji-based style
+  const smileMap = {
+    '😐': () => { ctx.beginPath(); ctx.moveTo(W/2-eyeR*1.1, H*0.68); ctx.lineTo(W/2+eyeR*1.1, H*0.68); ctx.strokeStyle='#3a2200'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.stroke(); },
+    '🙂': () => drawSmile(ctx, W/2, H*0.67, eyeR*1.3, false),
+    '😤': () => { drawSmile(ctx, W/2, H*0.70, eyeR*1.1, true); drawAngryBrows(ctx, W/2, eyeY, eyeR); },
+    '🤔': () => { drawSmile(ctx, W/2+8, H*0.68, eyeR*0.9, false); drawThinkBrow(ctx, W/2, eyeY, eyeR); },
+    '😴': () => { drawZzz(ctx, W/2+eyeR*2, eyeY-eyeR*2); drawSmile(ctx, W/2, H*0.68, eyeR*0.8, false); },
+    '🥸': () => { drawGlasses(ctx, W/2, eyeY, eyeR); drawSmile(ctx, W/2, H*0.67, eyeR*1.2, false); },
+    '😈': () => { drawSmile(ctx, W/2, H*0.67, eyeR*1.2, false); drawDevilBrows(ctx, W/2, eyeY, eyeR); },
+    '🤖': () => { drawRobotEyes(ctx, W/2, eyeY, eyeR); drawRobotMouth(ctx, W/2, H*0.67, eyeR); },
+    '😎': () => { drawCoolGlasses(ctx, W/2, eyeY, eyeR); drawSmile(ctx, W/2, H*0.67, eyeR*1.2, false); },
+    '🧐': () => { drawMonocle(ctx, W/2+eyeR*1.3, eyeY, eyeR); drawSmile(ctx, W/2, H*0.67, eyeR*1.0, false); },
+    '😡': () => { drawSmile(ctx, W/2, H*0.70, eyeR*1.1, true); drawAngryBrows2(ctx, W/2, eyeY, eyeR); },
+    '🥳': () => { drawSmile(ctx, W/2, H*0.66, eyeR*1.3, false); drawPartyHat(ctx, W/2, eyeY, eyeR); },
+  };
+  const drawFn = smileMap[emoji] || smileMap['😐'];
+  drawFn();
+
+  return new THREE.CanvasTexture(cv);
+}
+
+function drawSmile(ctx, cx, cy, r, frown) {
+  ctx.beginPath();
+  ctx.arc(cx, frown ? cy - r*0.6 : cy, r, frown ? 0 : Math.PI*0.1, frown ? Math.PI : Math.PI*0.9);
+  ctx.strokeStyle='#3a2200'; ctx.lineWidth=6; ctx.lineCap='round'; ctx.stroke();
+}
+function drawAngryBrows(ctx, cx, eyeY, er) {
+  [[-1,0.15],[1,-0.15]].forEach(([s,tilt]) => {
+    const ex = cx + s*er*0.9*1.7;
+    ctx.beginPath();
+    ctx.moveTo(ex-er*1.1, eyeY-er*1.4+tilt*40);
+    ctx.lineTo(ex+er*1.1, eyeY-er*1.4-tilt*40);
+    ctx.strokeStyle='#3a2200'; ctx.lineWidth=7; ctx.lineCap='round'; ctx.stroke();
+  });
+}
+function drawAngryBrows2(ctx, cx, eyeY, er) {
+  [[-1,0.2],[1,-0.2]].forEach(([s,tilt]) => {
+    const ex = cx + s*er*0.9*1.7;
+    ctx.beginPath();
+    ctx.moveTo(ex-er*1.2, eyeY-er*1.2+tilt*50);
+    ctx.lineTo(ex+er*1.2, eyeY-er*1.2-tilt*50);
+    ctx.strokeStyle='#5a1a00'; ctx.lineWidth=8; ctx.lineCap='round'; ctx.stroke();
+  });
+}
+function drawDevilBrows(ctx, cx, eyeY, er) {
+  [[-1,-0.15],[1,0.15]].forEach(([s,tilt]) => {
+    const ex = cx + s*er*0.9*1.7;
+    ctx.beginPath();
+    ctx.moveTo(ex-er*1.1, eyeY-er*1.4+tilt*40);
+    ctx.lineTo(ex+er*1.1, eyeY-er*1.4-tilt*40);
+    ctx.strokeStyle='#4a0080'; ctx.lineWidth=7; ctx.lineCap='round'; ctx.stroke();
+  });
+}
+function drawThinkBrow(ctx, cx, eyeY, er) {
+  const ex2 = cx + er*0.9*1.7;
+  ctx.beginPath();
+  ctx.moveTo(ex2-er*1.0, eyeY-er*1.6);
+  ctx.lineTo(ex2+er*1.0, eyeY-er*1.1);
+  ctx.strokeStyle='#3a2200'; ctx.lineWidth=6; ctx.lineCap='round'; ctx.stroke();
+}
+function drawZzz(ctx, x, y) {
+  ctx.font = 'bold 28px serif'; ctx.fillStyle='rgba(80,80,80,0.6)';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText('z z', x, y);
+}
+function drawGlasses(ctx, cx, ey, er) {
+  ctx.strokeStyle='#4a3a00'; ctx.lineWidth=5; ctx.lineCap='round';
+  [[-1,1],[1,1]].forEach(([s]) => {
+    const ex = cx + s*er*1.5;
+    ctx.beginPath(); ctx.arc(ex, ey, er*1.2, 0, Math.PI*2); ctx.stroke();
+  });
+  ctx.beginPath(); ctx.moveTo(cx-er*0.3, ey); ctx.lineTo(cx+er*0.3, ey); ctx.stroke();
+}
+function drawCoolGlasses(ctx, cx, ey, er) {
+  ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.strokeStyle='#666'; ctx.lineWidth=3;
+  [[-1,1],[1,1]].forEach(([s]) => {
+    const ex = cx + s*er*1.5;
+    ctx.beginPath(); ctx.arc(ex, ey, er*1.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  });
+  ctx.strokeStyle='#888'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(cx-er*0.3, ey); ctx.lineTo(cx+er*0.3, ey); ctx.stroke();
+}
+function drawMonocle(ctx, ex, ey, er) {
+  ctx.strokeStyle='#b8860b'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(ex, ey, er*1.3, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ex+er*1.3, ey+er*0.5); ctx.lineTo(ex+er*2.0, ey+er*2.0);
+  ctx.stroke();
+}
+function drawRobotEyes(ctx, cx, ey, er) {
+  [[-1,1],[1,1]].forEach(([s]) => {
+    const ex = cx + s*er*1.3;
+    ctx.fillStyle='#00ff99'; ctx.strokeStyle='#006644'; ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.rect(ex-er*0.9, ey-er*0.7, er*1.8, er*1.4);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(ex-er*0.4, ey-er*0.3, er*0.8, er*0.6);
+  });
+}
+function drawRobotMouth(ctx, cx, cy, er) {
+  ctx.strokeStyle='#006644'; ctx.lineWidth=4;
+  ctx.strokeRect(cx-er*1.3, cy-er*0.4, er*2.6, er*0.8);
+  for(let i=0;i<5;i++) {
+    ctx.beginPath();
+    ctx.moveTo(cx-er*1.3+i*(er*2.6/4), cy-er*0.4);
+    ctx.lineTo(cx-er*1.3+i*(er*2.6/4), cy+er*0.4);
+    ctx.strokeStyle='rgba(0,100,68,0.5)'; ctx.lineWidth=2; ctx.stroke();
+  }
+}
+function drawPartyHat(ctx, cx, eyeY, er) {
+  ctx.fillStyle='#ff4488';
+  ctx.beginPath(); ctx.moveTo(cx, eyeY-er*4.5); ctx.lineTo(cx-er*1.4, eyeY-er*2);
+  ctx.lineTo(cx+er*1.4, eyeY-er*2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#ffdd00';
+  ctx.beginPath(); ctx.arc(cx, eyeY-er*4.5, er*0.3, 0, Math.PI*2); ctx.fill();
+}
+
+// ── Hair meshes ──
+function buildHair(style, color) {
+  const g = new THREE.Group();
+  const mat = () => new THREE.MeshLambertMaterial({ color: new THREE.Color(color) });
+  switch(style) {
+    case 'SHORT': {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.255,0.255,0.13,24), mat());
+      m.position.y=0.065; m.castShadow=true; g.add(m);
+      // Side pieces
+      [-1,1].forEach(s => {
+        const side = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.22,0.28), mat());
+        side.position.set(s*0.25,0,0.04); side.castShadow=true; g.add(side);
+      });
+      break;
+    }
+    case 'LONG': {
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.1,24), mat());
+      top.position.y=0.05; g.add(top);
+      [-1,1].forEach(s => {
+        const long = new THREE.Mesh(new THREE.BoxGeometry(0.11,0.7,0.28), mat());
+        long.position.set(s*0.25,-0.28,0.02); g.add(long);
+      });
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.65,0.1), mat());
+      back.position.set(0,-0.24,-0.22); g.add(back);
+      break;
+    }
+    case 'SPIKY': {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.08,24), mat());
+      base.position.y=0.04; g.add(base);
+      [[-0.14,0.38,0.02],[0,0.42,0.02],[0.14,0.38,0.02],[-0.07,0.35,-0.1],[0.07,0.35,-0.1]].forEach(([x,h,z])=>{
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.055,h,6), mat());
+        spike.position.set(x, h/2, z); g.add(spike);
+      });
+      break;
+    }
+    case 'BUN': {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.1,24), mat());
+      base.position.y=0.05; g.add(base);
+      const bun = new THREE.Mesh(new THREE.SphereGeometry(0.18,16,12), mat());
+      bun.position.y=0.26; g.add(bun);
+      break;
+    }
+    case 'CURLY': {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.30,0.28,0.22,24), mat());
+      base.position.y=0.11; g.add(base);
+      [[0.26,0.08,0.1],[−0.26,0.08,0.1],[0.26,0.08,-0.1],[-0.26,0.08,-0.1],[0,0.28,0.22],[0,0.28,-0.22]].forEach(([x,y,z])=>{
+        if(isNaN(x)) return;
+        const curl = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8), mat());
+        curl.position.set(x,y,z); g.add(curl);
+      });
+      break;
+    }
+    case 'HELMET': {
+      const h = new THREE.Mesh(new THREE.CylinderGeometry(0.275,0.27,0.54,32,1,false,0,Math.PI*2), mat());
+      h.position.y=0.15;
+      // Visor
+      const vis = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.15,0.06), new THREE.MeshLambertMaterial({color:0x111122,transparent:true,opacity:0.8}));
+      vis.position.set(0,0.04,0.25); h.add(vis);
+      g.add(h);
+      break;
+    }
+    case 'PONYTAIL': {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,0.1,24), mat());
+      base.position.y=0.05; g.add(base);
+      const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.04,0.55,12), mat());
+      tail.position.set(0,0.01,-0.28); tail.rotation.x=-0.3; g.add(tail);
+      break;
+    }
+    default: break; // BALD
+  }
+  g.traverse(c=>{ if(c.isMesh) c.castShadow=true; });
+  return g;
+}
+
+// ── Full lego character ──
+function buildLego(bodyHex, faceEmoji='😐', hairStyle='SHORT', hairHex='#1a1a1a') {
+  const group = new THREE.Group();
+  const bodyC = new THREE.Color(bodyHex);
+  const bodyMat = new THREE.MeshLambertMaterial({ color: bodyC });
+  const legMat  = new THREE.MeshLambertMaterial({ color: 0x1a1a2e });
+  const armMat  = new THREE.MeshLambertMaterial({ color: bodyC.clone() });
+  const handMat = new THREE.MeshLambertMaterial({ color: 0xffd700 });
+  const footMat = new THREE.MeshLambertMaterial({ color: 0x0f0f1e });
+  const studMat = new THREE.MeshLambertMaterial({ color: bodyC.clone().lerp(new THREE.Color(0xffffff),0.2) });
+
+  // Torso
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.62,0.55,0.32), bodyMat);
+  torso.position.y=0.75; torso.castShadow=true; group.add(torso);
+  // Torso studs
+  const sg = new THREE.CylinderGeometry(0.075,0.075,0.06,10);
+  [-0.16,0.16].forEach(x=>{ const s=new THREE.Mesh(sg,studMat); s.position.set(x,1.045,0); group.add(s); });
+
+  // ── PRECISE HEAD ──
+  const headGroup = makePreciseHead(faceEmoji, 0xffd700);
+  headGroup.position.y = 1.3;
+  group.add(headGroup);
+
+  // Hair
+  const hairG = buildHair(hairStyle, hairHex);
+  hairG.position.y = 1.515;
+  group.add(hairG);
+
+  // Legs
+  const legG = new THREE.BoxGeometry(0.255,0.42,0.3);
+  const legL = new THREE.Mesh(legG, legMat); legL.position.set(-0.17,0.34,0); legL.castShadow=true; group.add(legL);
+  const legR = new THREE.Mesh(legG, legMat.clone()); legR.position.set(0.17,0.34,0); legR.castShadow=true; group.add(legR);
+
+  // Feet
+  const fG = new THREE.BoxGeometry(0.27,0.1,0.34);
+  [-0.17,0.17].forEach(x=>{ const f=new THREE.Mesh(fG,footMat); f.position.set(x,0.15,0.02); group.add(f); });
+
+  // Arms
+  const aG = new THREE.BoxGeometry(0.15,0.4,0.23);
+  const armL=new THREE.Mesh(aG,armMat); armL.position.set(-0.41,0.77,0); armL.castShadow=true; group.add(armL);
+  const armR=new THREE.Mesh(aG,armMat.clone()); armR.position.set(0.41,0.77,0); armR.castShadow=true; group.add(armR);
+
+  // Hands
+  const hG=new THREE.SphereGeometry(0.09,8,8);
+  [-0.41,0.41].forEach(x=>{ const h=new THREE.Mesh(hG,handMat); h.position.set(x,0.56,0); group.add(h); });
+
+  group.traverse(c=>{ if(c.isMesh) c.castShadow=true; });
+  group.userData = { legL, legR, armL, armR, headGroup };
+  return group;
+}
+
+// ── Agents ──
+const DEFS = [
+  { name:'🔬 analyst', color:'#7c3aed', face:'😐', hair:'SHORT', hairColor:'#1a1a1a', pos:[-3,0,-2] },
+  { name:'✍️ writer',  color:'#059669', face:'🙂', hair:'LONG',  hairColor:'#b07030', pos:[2,0,-3]  },
+  { name:'🔍 reviewer',color:'#d97706', face:'🧐', hair:'BALD',  hairColor:'#1a1a1a', pos:[0,0,2]   },
+];
+const agents = DEFS.map(d => {
+  const mesh = buildLego(d.color, d.face, d.hair, d.hairColor);
+  mesh.position.set(...d.pos); scene.add(mesh);
+  return { mesh, ...d, pos: new THREE.Vector3(...d.pos), target: new THREE.Vector3(...d.pos), walkPhase:Math.random()*Math.PI*2, _pt:null };
+});
+
+const PATROLS=[
+  [[-3,-2],[-1,-3],[-4,-1],[-2,-4]],
+  [[2,-3],[4,-1],[3,1],[1,-2]],
+  [[0,2],[2,3],[-1,3],[1,4]],
+];
+let meetingMode=false, selIdx=0;
+
+function pickPatrol(i) {
+  if(meetingMode) return;
+  const a=agents[i]; const pts=PATROLS[i];
+  const pt=pts[Math.floor(Math.random()*pts.length)];
+  a.target.set(pt[0],0,pt[1]);
+}
+agents.forEach((_,i)=>setTimeout(()=>pickPatrol(i),i*600+300));
+
+function rebuildAgent(i) {
+  const a=agents[i]; scene.remove(a.mesh);
+  const m=buildLego(a.color,a.face,a.hair,a.hairColor);
+  m.position.copy(a.pos); m.rotation.y=a.mesh.rotation.y;
+  scene.add(m); a.mesh=m;
+}
+
+// Global UI
+window.selAgent=(i)=>{
+  selIdx=i; document.getElementById('aname').textContent=agents[i].name;
+  document.querySelectorAll('.atab').forEach((e,j)=>e.classList.toggle('sel',j===i));
+};
+window.applyFace=(el,f)=>{ agents[selIdx].face=f; rebuildAgent(selIdx); document.querySelectorAll('.fopt').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+window.applyHair=(el,s)=>{ agents[selIdx].hair=s; rebuildAgent(selIdx); document.querySelectorAll('.hopt').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+window.applyHairColor=(el,c)=>{ agents[selIdx].hairColor=c; rebuildAgent(selIdx); document.querySelectorAll('.crow:nth-child(1) .csw').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+window.applyBodyColor=(el,c)=>{ agents[selIdx].color=c; rebuildAgent(selIdx); document.querySelectorAll('.crow:nth-child(2) .csw').forEach(e=>e.classList.remove('sel')); el.classList.add('sel'); };
+
+let zoomDist=20;
+window.addEventListener('wheel',e=>{ zoomDist=Math.max(8,Math.min(35,zoomDist+e.deltaY*0.018)); });
+
+const clock=new THREE.Clock();
+function frame(){
+  requestAnimationFrame(frame);
+  const dt=Math.min(clock.getDelta(),0.05), t=clock.getElapsedTime();
+  const dir=camera.position.clone().normalize().multiplyScalar(zoomDist);
+  camera.position.lerp(dir,0.07); camera.lookAt(0,0.5,0);
+
+  agents.forEach((a,i)=>{
+    const dx=a.target.x-a.pos.x, dz=a.target.z-a.pos.z;
+    const dist=Math.sqrt(dx*dx+dz*dz), walking=dist>0.06;
+    if(walking){
+      const step=Math.min(dist,2.2*dt);
+      a.pos.x+=dx/dist*step; a.pos.z+=dz/dist*step;
+      a.mesh.rotation.y=Math.atan2(dx,dz);
+    } else if(!meetingMode&&!a._pt){
+      a._pt=setTimeout(()=>{ a._pt=null; pickPatrol(i); },900+Math.random()*1300);
+    }
+    a.mesh.position.set(a.pos.x,0,a.pos.z);
+    const ud=a.mesh.userData;
+    if(walking){
+      const ph=t*8+a.walkPhase;
+      ud.legL.rotation.x=Math.sin(ph)*0.45; ud.legR.rotation.x=-Math.sin(ph)*0.45;
+      ud.armL.rotation.x=-Math.sin(ph)*0.3; ud.armR.rotation.x=Math.sin(ph)*0.3;
+      a.mesh.position.y=Math.abs(Math.sin(ph*0.5))*0.04;
+    } else {
+      [ud.legL,ud.legR,ud.armL,ud.armR].forEach(p=>{ if(p) p.rotation.x*=0.85; });
+      a.mesh.position.y=Math.sin(t*1.8+a.walkPhase)*0.025;
+      if(ud.headGroup) ud.headGroup.rotation.y=Math.sin(t*0.6+a.walkPhase)*0.12;
+    }
+  });
+  renderer.render(scene,camera);
+}
+frame();
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='m'||e.key==='M'){ meetingMode=true; agents[0].target.set(-0.8,0,0.2); agents[1].target.set(0.8,0,0.2); }
+  if(e.key==='r'||e.key==='R') location.reload();
+});
+</script>
+</body>
+</html>
