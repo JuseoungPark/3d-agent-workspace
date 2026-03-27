@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { getEventBuffer, getActualPort, setEventHandler } from './server'
 import { WSEvent } from './types'
+import { toggleMiniWindow } from './mini-window'
 
 export function setupIPC(mainWindow: BrowserWindow) {
   // Relay events from HTTP server → renderer
@@ -10,4 +11,5 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
   ipcMain.handle('get-event-buffer', () => getEventBuffer())
   ipcMain.handle('get-server-port', () => getActualPort())
+  ipcMain.on('toggle-mini', () => toggleMiniWindow())
 }

@@ -3,8 +3,11 @@ import { useWorkspaceStore } from './store/workspace'
 import { WSEvent } from './types'
 import { Scene } from './scene/Scene'
 import { StreamBar } from './ui/StreamBar'
+import { MiniContent } from './ui/MiniContent'
 
 export default function App() {
+  const isMini = new URLSearchParams(location.search).get('mini') === '1'
+
   const handleEvent = useWorkspaceStore(s => s.handleEvent)
   const setServerConnected = useWorkspaceStore(s => s.setServerConnected)
 
@@ -39,6 +42,8 @@ export default function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  if (isMini) return <MiniContent />
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#020617' }}>
