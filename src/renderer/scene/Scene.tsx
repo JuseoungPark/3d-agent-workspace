@@ -1,5 +1,6 @@
-import React, { Suspense } from 'react'
-import { Canvas } from '@react-three/fiber'
+import React, { Suspense, useRef } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { useWorkspaceStore } from '../store/workspace'
 import { AgentBlock } from './AgentBlock'
@@ -19,16 +20,55 @@ function Floor() {
   return <>{tiles}</>
 }
 
+const DEFAULT_CAM_POS = new THREE.Vector3(10, 13, 10)
+const DEFAULT_CAM_TARGET = new THREE.Vector3(0, 0, 0)
+
+function CameraFollow() {
+  const { camera, controls } = useThree()
+  const agents = useWorkspaceStore(s => s.agents)
+  const selectedAgentId = useWorkspaceStore(s => s.selectedAgentId)
+  const cameraMode = useWorkspaceStore(s => s.cameraMode)
+  useFrame((_, delta) => {
+    const ctrl = controls as any
+    if (!ctrl) return
+    const selected = selectedAgentId ? agents[selectedAgentId] : null
+    const isCompact = window.innerWidth < 600
+
+    if (selected && cameraMode === 'face' && !isCompact) {
+      const destPos = new THREE.Vector3(selected.pos.x + 1.8, 2.8, selected.pos.z + 1.8)
+      const destTarget = new THREE.Vector3(selected.pos.x, 1.5, selected.pos.z)
+      camera.position.lerp(destPos, delta * 3.5)
+      ctrl.target.lerp(destTarget, delta * 3.5)
+    } else if (selected) {
+      const destPos = new THREE.Vector3(selected.pos.x + 5, 8, selected.pos.z + 5)
+      const destTarget = new THREE.Vector3(selected.pos.x, 0, selected.pos.z)
+      camera.position.lerp(destPos, delta * 2.5)
+      ctrl.target.lerp(destTarget, delta * 2.5)
+    } else {
+      camera.position.lerp(DEFAULT_CAM_POS, delta * 2.0)
+      ctrl.target.lerp(DEFAULT_CAM_TARGET, delta * 2.0)
+    }
+    ctrl.update()
+  })
+  return null
+}
+
 export function Scene() {
   const agents = useWorkspaceStore(s => s.agents)
+  const selectedAgentId = useWorkspaceStore(s => s.selectedAgentId)
+  const selectAgent = useWorkspaceStore(s => s.selectAgent)
+  const bgOpacity = useWorkspaceStore(s => s.bgOpacity)
+  const bg = `rgba(2,6,23,${bgOpacity})`
 
   return (
-    <div style={{ flex: 1, position: 'relative' }}>
+    <div style={{ flex: 1, position: 'relative', minHeight: 0, background: bg }}>
       <Canvas
+        style={{ width: '100%', height: '100%' }}
         shadows
         camera={{ position: [10, 13, 10], fov: 40 }}
-        gl={{ antialias: true }}
-        style={{ background: '#020617' }}
+        gl={{ antialias: true, alpha: true }}
+        onCreated={({ gl }) => gl.setClearAlpha(0)}
+        onPointerMissed={() => selectAgent(null)}
       >
         <fog attach="fog" args={['#020617', 30, 80]} />
         <ambientLight intensity={2.5} color={0x1a2a4a} />
@@ -46,6 +86,14 @@ export function Scene() {
           shadow-bias={-0.001}
         />
         <directionalLight position={[-4, 5, -6]} intensity={1.0} color={0x3355bb} />
+
+        <OrbitControls
+          makeDefault
+          maxPolarAngle={Math.PI / 2.2}
+          minDistance={4}
+          maxDistance={40}
+        />
+        <CameraFollow />
 
         <Suspense fallback={null}>
           <Floor />

@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"ls dist/\",\"description\":\"List dist directory contents\"}",
+  "error": "Exit code 1\nls: dist/: No such file or directory",
+  "timestamp": "2026-03-28T07:48:31.734Z",
+  "retry_count": 2
+}

@@ -13,7 +13,10 @@ def main():
     agent_type  = payload.get("agent_type", "default")
     tool_name   = payload.get("tool_name", "")
 
-    if event_type == "pre_tool":
+    if event_type == "prompt":
+        ws_event = {"type": "tool_use", "agentId": agent_id,
+                    "agentType": agent_type, "tool": "thinking"}
+    elif event_type == "pre_tool":
         if tool_name == "Agent":
             ws_event = {"type": "agent_start", "agentId": agent_id,
                         "agentType": agent_type, "tool": tool_name}
@@ -25,7 +28,7 @@ def main():
         ws_event = {"type": "tool_done", "agentId": agent_id,
                     "agentType": agent_type, "tool": tool_name}
     elif event_type == "stop":
-        ws_event = {"type": "agent_done", "agentId": agent_id,
+        ws_event = {"type": "agent_celebrate", "agentId": agent_id,
                     "agentType": agent_type}
     else:
         sys.exit(0)

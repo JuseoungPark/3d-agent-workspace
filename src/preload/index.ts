@@ -15,4 +15,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-server-port'),
   // Mini window toggle
   toggleMini: () => ipcRenderer.send('toggle-mini'),
+  // Open terminal app
+  openTerminal: (): Promise<void> =>
+    ipcRenderer.invoke('open-terminal'),
+  // Window controls
+  setFloatMode: (enabled: boolean): Promise<void> =>
+    ipcRenderer.invoke('set-float-mode', enabled),
 })

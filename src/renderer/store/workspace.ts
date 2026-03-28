@@ -1,15 +1,41 @@
 import { create } from 'zustand'
 import { AgentState, WSEvent, StreamEvent, ViewMode, getRoleConfig } from '../types'
+import { HairStyle } from '../scene/HairPiece'
+
+export interface AvatarOverride {
+  face?: string
+  hairStyle?: HairStyle
+  hairColor?: string
+  voiceEnabled?: boolean
+}
 
 interface WorkspaceStore {
   agents: Record<string, AgentState>
   streamEvents: StreamEvent[]
   viewMode: ViewMode
   serverConnected: boolean
+  selectedAgentId: string | null
+  cameraMode: 'face' | 'overview'
+  bgOpacity: number
+  avatarOverrides: Record<string, AvatarOverride>
 
   handleEvent: (event: WSEvent) => void
   setViewMode: (mode: ViewMode) => void
   setServerConnected: (v: boolean) => void
+  selectAgent: (id: string | null) => void
+  setCameraMode: (mode: 'face' | 'overview') => void
+  setBgOpacity: (v: number) => void
+  setAgentChatMessage: (id: string, text: string | null) => void
+  setAgentTarget: (id: string, x: number, z: number) => void
+  setAgentPos: (id: string, x: number, z: number) => void
+  hitAgent: (id: string) => void
+  setAvatarOverride: (id: string, override: Partial<AvatarOverride>) => void
+}
+
+const SIMPSONS_VOICES = ['homer', 'marge', 'bart', 'lisa']
+
+function randomVoice(): string {
+  return SIMPSONS_VOICES[Math.floor(Math.random() * SIMPSONS_VOICES.length)]
 }
 
 // Zone assignment: each role gets a 3×3 area on the 8×8 grid
@@ -48,6 +74,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   streamEvents: [],
   viewMode: 'default',
   serverConnected: false,
+  selectedAgentId: null,
+  cameraMode: 'overview',
+  bgOpacity: 1,
+  avatarOverrides: {},
 
   handleEvent(event: WSEvent) {
     const { agents } = get()
@@ -81,6 +111,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         target: spawnPos,
         meetingWith: [],
         spawnedAt: event.ts,
+        voiceId: existing?.voiceId ?? randomVoice(),
       }
       set(state => ({ agents: { ...state.agents, [event.agentId]: newAgent } }))
 
@@ -152,6 +183,47 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       })
     }
 
+    if (event.type === 'agent_idle') {
+      if (!existing) return
+      set(state => {
+        const a = state.agents[event.agentId]
+        if (!a) return {}
+        return {
+          agents: {
+            ...state.agents,
+            [event.agentId]: { ...a, status: 'idle', currentTool: null },
+          },
+        }
+      })
+    }
+
+    if (event.type === 'agent_celebrate') {
+      if (!existing) return
+      set(state => {
+        const a = state.agents[event.agentId]
+        if (!a) return {}
+        return {
+          agents: {
+            ...state.agents,
+            [event.agentId]: { ...a, status: 'celebrating', currentTool: null, lastMessage: '완료! 확인해봐 👀' },
+          },
+        }
+      })
+      // Back to idle after 4s
+      setTimeout(() => {
+        set(state => {
+          const a = state.agents[event.agentId]
+          if (!a || a.status !== 'celebrating') return {}
+          return {
+            agents: {
+              ...state.agents,
+              [event.agentId]: { ...a, status: 'idle', lastMessage: null },
+            },
+          }
+        })
+      }, 4000)
+    }
+
     if (event.type === 'agent_done') {
       if (!existing) return
       set(state => {
@@ -177,4 +249,37 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   setViewMode: (mode) => set({ viewMode: mode }),
   setServerConnected: (v) => set({ serverConnected: v }),
+  selectAgent: (id) => set({ selectedAgentId: id, cameraMode: id ? 'face' : 'overview' }),
+  setCameraMode: (mode) => set({ cameraMode: mode }),
+  setBgOpacity: (v) => set({ bgOpacity: v }),
+  setAvatarOverride: (id, override) => set(state => ({
+    avatarOverrides: { ...state.avatarOverrides, [id]: { ...state.avatarOverrides[id], ...override } },
+  })),
+  setAgentChatMessage: (id, text) => set(state => {
+    const a = state.agents[id]
+    if (!a) return {}
+    return { agents: { ...state.agents, [id]: { ...a, lastMessage: text } } }
+  }),
+  setAgentTarget: (id, x, z) => set(state => {
+    const a = state.agents[id]
+    if (!a) return {}
+    return { agents: { ...state.agents, [id]: { ...a, target: { x, z } } } }
+  }),
+  setAgentPos: (id, x, z) => set(state => {
+    const a = state.agents[id]
+    if (!a) return {}
+    return { agents: { ...state.agents, [id]: { ...a, pos: { x, z } } } }
+  }),
+  hitAgent: (id) => {
+    set(state => {
+      const a = state.agents[id]
+      if (!a) return {}
+      return { agents: { ...state.agents, [id]: { ...a, hitAt: Date.now(), lastMessage: '아야!' } } }
+    })
+    setTimeout(() => set(state => {
+      const a = state.agents[id]
+      if (!a || a.lastMessage !== '아야!') return {}
+      return { agents: { ...state.agents, [id]: { ...a, lastMessage: null } } }
+    }), 1400)
+  },
 }))

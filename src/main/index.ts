@@ -9,9 +9,9 @@ function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    minWidth: 800,
-    minHeight: 600,
-    backgroundColor: '#020617',
+    minWidth: 360,
+    minHeight: 260,
+    transparent: true,
     titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -26,6 +26,7 @@ function createMainWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  mainWindow.setAlwaysOnTop(true, 'floating')
   setupIPC(mainWindow)
 }
 
