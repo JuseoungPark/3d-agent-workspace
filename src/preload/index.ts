@@ -3,8 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 contextBridge.exposeInMainWorld('electronAPI', {
   // Renderer subscribes to events
   onAgentEvent: (callback: (event: unknown) => void) => {
-    ipcRenderer.on('agent-event', (_evt, data) => callback(data))
-    return () => ipcRenderer.removeAllListeners('agent-event')
+    const handler = (_evt: Electron.IpcRendererEvent, data: unknown) => callback(data)
+    ipcRenderer.on('agent-event', handler)
+    return () => ipcRenderer.removeListener('agent-event', handler)
   },
   // Get buffered events on load
   getEventBuffer: (): Promise<unknown[]> =>

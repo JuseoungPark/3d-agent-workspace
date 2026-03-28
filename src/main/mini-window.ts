@@ -3,6 +3,10 @@ import { join } from 'path'
 
 let miniWindow: BrowserWindow | null = null
 
+export function getMiniWindow(): BrowserWindow | null {
+  return miniWindow && !miniWindow.isDestroyed() ? miniWindow : null
+}
+
 export function toggleMiniWindow() {
   if (miniWindow && !miniWindow.isDestroyed()) {
     miniWindow.close()

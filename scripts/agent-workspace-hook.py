@@ -32,16 +32,18 @@ def main():
 
     ws_event["ts"] = int(time.time() * 1000)
 
-    try:
-        data = json.dumps(ws_event).encode()
-        req  = urllib.request.Request(
-            "http://localhost:7379/event",
-            data=data, method="POST",
-            headers={"Content-Type": "application/json"}
-        )
-        urllib.request.urlopen(req, timeout=1)
-    except Exception:
-        pass  # Never block Claude Code
+    for port in [7379, 7380, 7381]:
+        try:
+            data = json.dumps(ws_event).encode()
+            req = urllib.request.Request(
+                f"http://localhost:{port}/event",
+                data=data, method="POST",
+                headers={"Content-Type": "application/json"}
+            )
+            urllib.request.urlopen(req, timeout=1)
+            break  # success — stop trying
+        except Exception:
+            continue  # try next port
 
 if __name__ == "__main__":
     main()
