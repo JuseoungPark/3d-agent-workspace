@@ -16,10 +16,16 @@ def main():
     tool_name   = payload.get("tool_name", "")
 
     if event_type == "prompt":
-        # Record Claude Code's PID so Electron can watch for process exit
+        # Append this session's PID — Electron quits only when ALL are dead
         try:
+            try:
+                with open(PID_FILE, "r") as f:
+                    pids = set(f.read().split())
+            except FileNotFoundError:
+                pids = set()
+            pids.add(str(os.getppid()))
             with open(PID_FILE, "w") as f:
-                f.write(str(os.getppid()))
+                f.write("\n".join(pids))
         except Exception:
             pass
         ws_event = {"type": "tool_use", "agentId": agent_id,

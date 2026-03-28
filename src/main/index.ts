@@ -13,18 +13,31 @@ let pidWatcher: ReturnType<typeof setInterval> | null = null
 
 function startPidWatcher() {
   pidWatcher = setInterval(() => {
+    let content: string
     try {
-      const pid = parseInt(readFileSync(PID_FILE, 'utf8').trim(), 10)
-      if (isNaN(pid)) return
-      // process.kill(pid, 0) throws if the process no longer exists
-      process.kill(pid, 0)
-    } catch (err: any) {
-      if (err.code === 'ESRCH') {
-        // Claude Code process is gone — shut down
-        console.log('[agent-workspace] Claude Code process gone, quitting')
-        app.quit()
+      content = readFileSync(PID_FILE, 'utf8').trim()
+    } catch {
+      return // PID file not yet created — no sessions started
+    }
+
+    const pids = content.split('\n')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n))
+
+    if (pids.length === 0) return
+
+    const anyAlive = pids.some(pid => {
+      try {
+        process.kill(pid, 0) // signal 0 = probe only
+        return true
+      } catch (err: any) {
+        return err.code === 'EPERM' // process exists, no permission → treat as alive
       }
-      // EPERM = process exists but no permission to signal → ignore
+    })
+
+    if (!anyAlive) {
+      console.log('[agent-workspace] all Claude Code sessions gone, quitting')
+      app.quit()
     }
   }, 5000)
 }
