@@ -1,4 +1,5 @@
 import http from 'http'
+import { app } from 'electron'
 import { WSEvent } from './types'
 
 const MAX_BUFFER = 200  // keep last 200 events (60s rolling)
@@ -14,6 +15,10 @@ export function getEventBuffer(): WSEvent[] {
   return [...eventBuffer]
 }
 
+export function clearBuffer(): void {
+  eventBuffer.splice(0)
+}
+
 export function getActualPort(): number {
   return actualPort
 }
@@ -27,7 +32,6 @@ function startOnPort(port: number, attempt: number): Promise<http.Server> {
         req.on('end', () => {
           try {
             const event: WSEvent = JSON.parse(body)
-            // Rolling buffer
             eventBuffer.push(event)
             if (eventBuffer.length > MAX_BUFFER) eventBuffer.shift()
             onEventCallback?.(event)
@@ -38,6 +42,11 @@ function startOnPort(port: number, attempt: number): Promise<http.Server> {
             res.end('bad json')
           }
         })
+      } else if (req.method === 'POST' && req.url === '/shutdown') {
+        res.writeHead(200)
+        res.end('bye')
+        server.close()
+        app.quit()
       } else {
         res.writeHead(404)
         res.end()

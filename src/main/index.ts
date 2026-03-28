@@ -1,9 +1,33 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
+import http from 'http'
 import { startServer } from './server'
 import { setupIPC } from './ipc'
 
+const PID_FILE = '/tmp/claude-agent-workspace.pid'
+
 let mainWindow: BrowserWindow | null = null
+let httpServer: http.Server | null = null
+let pidWatcher: ReturnType<typeof setInterval> | null = null
+
+function startPidWatcher() {
+  pidWatcher = setInterval(() => {
+    try {
+      const pid = parseInt(readFileSync(PID_FILE, 'utf8').trim(), 10)
+      if (isNaN(pid)) return
+      // process.kill(pid, 0) throws if the process no longer exists
+      process.kill(pid, 0)
+    } catch (err: any) {
+      if (err.code === 'ESRCH') {
+        // Claude Code process is gone — shut down
+        console.log('[agent-workspace] Claude Code process gone, quitting')
+        app.quit()
+      }
+      // EPERM = process exists but no permission to signal → ignore
+    }
+  }, 5000)
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -30,9 +54,26 @@ function createMainWindow() {
   setupIPC(mainWindow)
 }
 
+// Prevent multiple Electron instances from stacking up
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+}
+
 app.whenReady().then(async () => {
-  await startServer()
+  httpServer = await startServer()
   createMainWindow()
+  startPidWatcher()
+})
+
+app.on('before-quit', () => {
+  if (pidWatcher) {
+    clearInterval(pidWatcher)
+    pidWatcher = null
+  }
+  if (httpServer) {
+    httpServer.close()
+    httpServer = null
+  }
 })
 
 app.on('window-all-closed', () => {

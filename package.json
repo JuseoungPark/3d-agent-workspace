@@ -1,6 +1,6 @@
 {
   "name": "agent-workspace",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "3D Agent Workspace — visualize Claude Code sessions",
   "main": "out/main/index.js",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "package": "npm run build && electron-builder",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -23,7 +24,8 @@
     "electron-vite": "^5.0.0",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
-    "vite": "^8.0.3"
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
